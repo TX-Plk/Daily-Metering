@@ -16,9 +16,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // URL Google Apps Script Anda yang terbaru
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxo23MobXfSOK1u22fwiylixlOID5Y1xW0dXfVmsnJIiP2N21tQPPNHe2yyvn11ObH4/exec";
-
         const TIME_SLOTS = ["00:00", "02:00", "04:00", "06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00", "22:00"];
 
         function App() {
@@ -33,7 +31,6 @@
             
             const syncTimeoutRef = useRef(null);
 
-            // Ambil data lokal per slot secara aman (mencegah bentrok antar 3 user)
             const getMergedLocalData = (targetDate) => {
                 let combinedMetering = {};
                 let combinedOps = {};
@@ -57,7 +54,6 @@
                 return { meteringData: combinedMetering, operatorsBySlot: combinedOps };
             };
 
-            // Load data saat tanggal berubah
             useEffect(() => {
                 fetchData(date);
             }, [date]);
@@ -80,7 +76,6 @@
                         const serverMetering = result.data.meteringData || {};
                         const serverOps = result.data.operatorsBySlot || {};
 
-                        // Merge aman: utamakan data lokal yang sedang diinput user
                         const mergedMetering = { ...serverMetering };
                         Object.keys(local.meteringData).forEach(pId => {
                             mergedMetering[pId] = {
@@ -106,7 +101,6 @@
 
                 const paramId = "DefaultParam";
                 
-                // 1. Update State React
                 setMeteringData(prev => ({
                     ...prev,
                     [paramId]: {
@@ -120,7 +114,6 @@
                     [selectedSlot]: operatorName
                 }));
 
-                // 2. Simpan Atomic ke LocalStorage (Slot spesifik tidak mengganggu slot user lain)
                 try {
                     const slotKey = `metering_${date}_slot_${selectedSlot}`;
                     const slotData = { [paramId]: meterValue };
@@ -136,7 +129,6 @@
 
                 setSyncStatus("Menyimpan...");
 
-                // 3. Debounce sync ke Google Drive
                 if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
                 syncTimeoutRef.current = setTimeout(async () => {
                     try {
