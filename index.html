@@ -1,150 +1,86 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daily Report Metering - Multipetugas</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 p-4 md:p-8">
+<script>
+  // Link Google Apps Script terhubung ke akun Google Sheets yang baru
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyViJuWBY5MuP2ov98Mf92QuzH4eow4CJ17nC1KosbsErXXnaBJYqMVNO2wY2iJS2_D/exec";
 
-  <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
-    <h1 class="text-2xl font-bold text-blue-900 mb-4">Form Input Daily Report Metering</h1>
+  const form = document.getElementById('meteringForm');
+  const btnSimpan = document.getElementById('btnSimpan');
 
-    <!-- FORM INPUT PETUGAS -->
-    <form id="meteringForm" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      <div>
-        <label class="block text-xs font-bold text-gray-700 mb-1">Nama Petugas</label>
-        <select id="namaPetugas" class="w-full border p-2 rounded text-sm" required>
-          <option value="">-- Pilih Petugas --</option>
-          <option value="Muammar">Muammar</option>
-          <option value="Murjani">Murjani</option>
-          <option value="Petugas 3">Petugas 3</option>
-        </select>
-      </div>
-
-      <div>
-        <label class="block text-xs font-bold text-gray-700 mb-1">Jam / Slot</label>
-        <input type="text" id="jamSlot" placeholder="Contoh: 00.00 - 06.00" class="w-full border p-2 rounded text-sm" required />
-      </div>
-
-      <div>
-        <label class="block text-xs font-bold text-gray-700 mb-1">Nilai Metering</label>
-        <input type="number" id="nilaiMeter" placeholder="Masukkan Angka" class="w-full border p-2 rounded text-sm" required />
-      </div>
-
-      <div class="flex items-end">
-        <button type="submit" id="btnSimpan" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-2 rounded text-sm">
-          Simpan Data
-        </button>
-      </div>
-    </form>
-
-    <hr class="my-6">
-
-    <!-- TABEL HASIL INPUT 3 PETUGAS -->
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold text-gray-800">Rekapitulasi Data (Semua Petugas)</h2>
-      <button onclick="muatDataTerkini()" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded">
-        🔄 Refresh Data
-      </button>
-    </div>
-
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse border border-gray-200 text-sm">
-        <thead>
-          <tr class="bg-blue-900 text-white">
-            <th class="border p-2">Waktu Input</th>
-            <th class="border p-2">Petugas</th>
-            <th class="border p-2">Jam / Slot</th>
-            <th class="border p-2 text-right">Nilai Meter</th>
-          </tr>
-        </thead>
-        <tbody id="tabelData">
-          <tr>
-            <td colspan="4" class="p-4 text-center text-gray-500">Memuat data dari Google Drive...</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <script>
-    // URL Web App Google Apps Script terpusat
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxfj5AZT8Y1iwNypnVRRxaweUD-2o69SQFQXmMKBo4HujTNuSm6xZDPAsZpHwhvAdre/exec";
-
-    const form = document.getElementById('meteringForm');
-    const btnSimpan = document.getElementById('btnSimpan');
-
-    // 1. FUNGSI KIRIM DATA DARI PETUGAS MANAPUN
+  // 1. FUNGSI UNTUK MENYIMPAN DATA (Muammar, Murjani, dll)
+  if (form) {
     form.addEventListener('submit', function(e) {
       e.preventDefault();
       
-      btnSimpan.innerText = "Menyimpan...";
-      btnSimpan.disabled = true;
+      if (btnSimpan) {
+        btnSimpan.innerText = "Menyimpan...";
+        btnSimpan.disabled = true;
+      }
 
       const payload = {
-        petugas: document.getElementById('namaPetugas').value,
-        jam: document.getElementById('jamSlot').value,
-        nilai: document.getElementById('nilaiMeter').value
+        petugas: document.getElementById('namaPetugas') ? document.getElementById('namaPetugas').value : '',
+        jam: document.getElementById('jamSlot') ? document.getElementById('jamSlot').value : '',
+        nilai: document.getElementById('nilaiMeter') ? document.getElementById('nilaiMeter').value : ''
       };
 
       fetch(SCRIPT_URL, {
         method: "POST",
-        mode: "no-cors", // Mengizinkan pengiriman lintas domain dari GitHub Pages ke Google Apps Script
+        mode: "no-cors", // Wajib agar tidak diblokir CORS browser
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       })
       .then(() => {
-        alert("Data berhasil tersimpan!");
+        alert("Data berhasil tersimpan ke Google Drive akun baru!");
         form.reset();
-        btnSimpan.innerText = "Simpan Data";
-        btnSimpan.disabled = false;
-        setTimeout(muatDataTerkini, 1500); // Tunggu sebentar lalu muat ulang tabel
+        if (btnSimpan) {
+          btnSimpan.innerText = "Simpan Data";
+          btnSimpan.disabled = false;
+        }
+        setTimeout(muatDataTerkini, 1500); // Refresh tabel otomatis
       })
       .catch(error => {
         console.error("Gagal menyimpan:", error);
         alert("Gagal menyimpan data.");
-        btnSimpan.innerText = "Simpan Data";
-        btnSimpan.disabled = false;
+        if (btnSimpan) {
+          btnSimpan.innerText = "Simpan Data";
+          btnSimpan.disabled = false;
+        }
       });
     });
+  }
 
-    // 2. FUNGSI MEMBACA DATA TERPUSAT UNTUK SEMUA PETUGAS
-    function muatDataTerkini() {
-      fetch(SCRIPT_URL)
-        .then(res => res.json())
-        .then(data => {
-          const tbody = document.getElementById('tabelData');
-          tbody.innerHTML = "";
+  // 2. FUNGSI UNTUK MEMBACA DATA TERPUSAT DARI GOOGLE SHEETS
+  function muatDataTerkini() {
+    const tbody = document.getElementById('tabelData');
+    if (!tbody) return;
 
-          // Jika tidak ada data atau hanya header
-          if (!data || data.length <= 1) {
-            tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">Belum ada data diinput.</td></tr>';
-            return;
-          }
+    fetch(SCRIPT_URL)
+      .then(res => res.json())
+      .then(data => {
+        tbody.innerHTML = "";
 
-          // Tampilkan baris data dari Google Sheets (mulai indeks ke-1 membuang baris header)
-          for (let i = 1; i < data.length; i++) {
-            const row = data[i];
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-gray-50 border-b";
-            tr.innerHTML = `
-              <td class="p-2 text-gray-500 text-xs">${row[0] ? new Date(row[0]).toLocaleString('id-ID') : '-'}</td>
-              <td class="p-2 font-bold text-gray-800">${row[1] || '-'}</td>
-              <td class="p-2">${row[2] || '-'}</td>
-              <td class="p-2 text-right font-mono font-bold text-blue-700">${row[3] || '0'}</td>
-            `;
-            tbody.appendChild(tr);
-          }
-        })
-        .catch(err => {
-          console.error("Gagal memuat data:", err);
-        });
-    }
+        if (!data || data.length <= 1) {
+          tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">Belum ada data diinput.</td></tr>';
+          return;
+        }
 
-    // Otomatis baca data saat halaman pertama kali dibuka oleh siapapun
-    window.onload = muatDataTerkini;
-  </script>
-</body>
-</html>
+        // Tampilkan baris data (melewati baris header index ke-0)
+        for (let i = 1; i < data.length; i++) {
+          const row = data[i];
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-gray-50 border-b";
+          tr.innerHTML = `
+            <td class="p-2 text-gray-500 text-xs">${row[0] ? new Date(row[0]).toLocaleString('id-ID') : '-'}</td>
+            <td class="p-2 font-bold text-gray-800">${row[1] || '-'}</td>
+            <td class="p-2">${row[2] || '-'}</td>
+            <td class="p-2 text-right font-mono font-bold text-blue-700">${row[3] || '0'}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+      })
+      .catch(err => {
+        console.error("Gagal memuat data:", err);
+      });
+  }
+
+  // Otomatis muat data saat halaman dibuka
+  window.onload = muatDataTerkini;
+</script>
