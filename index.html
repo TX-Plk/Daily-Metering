@@ -12,7 +12,6 @@
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- CSS FORMAT CETAK 1 HALAMAN LANDSCAPE -->
     <style>
         @media print {
             @page {
@@ -29,7 +28,7 @@
             .no-print { display: none !important; }
             .print-shadow-none { box-shadow: none !important; border: 1px solid #cbd5e1 !important; }
             
-            main { padding: 0 !important; space-y: 2 border: none !important; }
+            main { padding: 0 !important; border: none !important; }
             table { font-size: 7pt !important; border-collapse: collapse !important; width: 100% !important; }
             th, td { padding: 1px 2px !important; line-height: 1.1 !important; border: 1px solid #94a3b8 !important; }
             input, select { border: none !important; background: transparent !important; padding: 0 !important; font-size: 7pt !important; text-align: center !important; }
@@ -50,7 +49,6 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // URL Web App Google Apps Script Terpasang Dari Akun Baru
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyViJuWBY5MuP2ov98Mf92QuzH4eow4CJ17nC1KosbsErXXnaBJYqMVNO2wY2iJS2_D/exec";
 
         const INITIAL_USERS = [
@@ -107,15 +105,9 @@
         };
 
         const LogoMNC = ({ className = "h-8" }) => (
-            <img 
-                src="Picture ok.png" 
-                alt="MNC Transmission" 
-                className={`${className} object-contain bg-white rounded p-1 shadow-sm`}
-                onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = "https://i.ibb.co/3yPZ5pW/Picture-ok.png";
-                }}
-            />
+            <div className={`${className} flex items-center justify-center bg-blue-900 text-white font-black px-2 py-1 rounded border border-blue-400 text-xs shadow-sm`}>
+                MNC
+            </div>
         );
 
         function App() {
@@ -505,7 +497,6 @@
                 return (slotIndex * totalParams) + paramIndex + 1;
             };
 
-            // HANDLING NAVIGASI TOMBOL PANAH (PANAH ATAS, BAWAH, KIRI, KANAN)
             const handleKeyDownNavigation = (e, slotIndex, paramIndex) => {
                 const totalParams = ALL_PARAM_ITEMS.length;
                 const totalSlots = TIME_SLOTS.length;
@@ -553,7 +544,7 @@
                     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
                         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-md border border-slate-700">
                             <div className="bg-blue-600 p-6 text-white text-center flex flex-col items-center">
-                                <LogoMNC className="h-12 mb-3" />
+                                <LogoMNC className="h-10 mb-2" />
                                 <h1 className="text-xl font-bold">Daily Report Metering</h1>
                                 <p className="text-xs text-blue-100 mt-1">STA. MNCGROUP PALANGKA RAYA</p>
                             </div>
@@ -622,7 +613,7 @@
                     <header className="bg-slate-900 text-white shadow-lg sticky top-0 z-50 no-print">
                         <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
                             <div className="flex items-center space-x-3">
-                                <LogoMNC className="h-9" />
+                                <LogoMNC className="h-8" />
                                 <div>
                                     <h1 className="font-bold text-base leading-tight">Daily Report Metering</h1>
                                     <p className="text-xs text-slate-400">{user.station}</p>
@@ -802,7 +793,6 @@
                             </div>
                         </div>
 
-                        {/* TABEL MATRIX INPUT DENGAN DUKUNGAN TAB & TOMBOL PANAH */}
                         {(viewMode === "matrix" || window.matchMedia('print').matches) && (
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print-shadow-none">
                                 <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center no-print">
@@ -885,7 +875,6 @@
                                                 ));
                                             })()}
 
-                                            {/* BARIS PENGINPUT ON DUTY */}
                                             <tr className="bg-blue-50 text-blue-900 font-bold border-t-2 border-slate-300 text-[11px]">
                                                 <td className="p-2 sticky left-0 bg-blue-50 border-r">Penginput On Duty</td>
                                                 <td className="p-2 text-center border-r">-</td>
@@ -905,7 +894,6 @@
                             </div>
                         )}
 
-                        {/* ACCORDION VIEW HP */}
                         {viewMode === "mobile" && (
                             <div className="space-y-4 no-print">
                                 <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -979,7 +967,6 @@
                             </div>
                         )}
 
-                        {/* TANDA TANGAN PRINT */}
                         <div className="hidden print:flex justify-end sign-section text-xs pr-8">
                             <div className="text-center">
                                 <p className="font-semibold text-slate-700">Mengetahui,</p>
@@ -991,7 +978,6 @@
 
                     </main>
 
-                    {/* MODAL RIWAYAT */}
                     {showHistoryModal && (
                         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                             <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200">
@@ -1037,7 +1023,6 @@
                         </div>
                     )}
 
-                    {/* MODAL UBAH PASSWORD */}
                     {showChangePassModal && (
                         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                             <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-slate-200">
