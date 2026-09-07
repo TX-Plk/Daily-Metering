@@ -3,255 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Metering Report - Multi-User</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <title>Daily Metering Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select, button { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #28a745; color: white; border: none; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        button:hover { background-color: #218838; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #007bff; color: white; }
+        .loading { text-align: center; font-style: italic; color: #666; display: none; }
+    </style>
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased min-h-screen">
+<body>
 
-    <div id="root"></div>
+<div class="container">
+    <h2>Form Laporan Metering Harian</h2>
+    
+    <div class="form-group">
+        <label for="reportDate">Tanggal Laporan:</label>
+        <input type="date" id="reportDate" onchange="loadData()">
+    </div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+    <div class="form-group">
+        <label for="operatorName">Nama Operator (On Duty):</label>
+        <input type="text" id="operatorName" placeholder="Contoh: Murjani / Muammar">
+    </div>
 
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxo23MobXfSOK1u22fwiylixlOID5Y1xW0dXfVmsnJIiP2N21tQPPNHe2yyvn11ObH4/exec";
-        const TIME_SLOTS = ["00:00", "02:00", "04:00", "06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00", "22:00"];
+    <div class="form-group">
+        <label for="slotTime">Jam / Slot Waktu:</label>
+        <select id="slotTime">
+            <option value="00:00">00:00</option>
+            <option value="02:00">02:00</option>
+            <option value="04:00">04:00</option>
+            <option value="06:00">06:00</option>
+            <option value="08:00">08:00</option>
+            <option value="10:00">10:00</option>
+            <option value="12:00">12:00</option>
+            <option value="14:00">14:00</option>
+            <option value="16:00">16:00</option>
+            <option value="18:00">18:00</option>
+            <option value="20:00">20:00</option>
+            <option value="22:00">22:00</option>
+        </select>
+    </div>
 
-        function App() {
-            const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
-            const [operatorName, setOperatorName] = useState("");
-            const [selectedSlot, setSelectedSlot] = useState("08:00");
-            const [meterValue, setMeterValue] = useState("");
-            
-            const [meteringData, setMeteringData] = useState({});
-            const [operatorsBySlot, setOperatorsBySlot] = useState({});
-            const [syncStatus, setSyncStatus] = useState("Siap");
-            
-            const syncTimeoutRef = useRef(null);
+    <div class="form-group">
+        <label for="meterValue">Nilai Metering (kWh / Parameter):</label>
+        <input type="number" id="meterValue" placeholder="Masukkan angka meteran...">
+    </div>
 
-            const getMergedLocalData = (targetDate) => {
-                let combinedMetering = {};
-                let combinedOps = {};
+    <div class="loading" id="loadingIndicator">Sedang memuat / menyimpan data...</div>
 
-                TIME_SLOTS.forEach(slot => {
-                    const slotKey = `metering_${targetDate}_slot_${slot}`;
-                    const raw = localStorage.getItem(slotKey);
-                    if (raw) {
-                        try {
-                            const parsed = JSON.parse(raw);
-                            if (parsed.data) {
-                                Object.keys(parsed.data).forEach(pId => {
-                                    if (!combinedMetering[pId]) combinedMetering[pId] = {};
-                                    combinedMetering[pId][slot] = parsed.data[pId];
-                                });
-                            }
-                            if (parsed.operator) combinedOps[slot] = parsed.operator;
-                        } catch(e){}
-                    }
-                });
-                return { meteringData: combinedMetering, operatorsBySlot: combinedOps };
-            };
+    <button onclick="saveData()">Simpan Data</button>
 
-            useEffect(() => {
-                fetchData(date);
-            }, [date]);
+    <h3>Rekap Data Harian</h3>
+    <table id="recapTable">
+        <thead>
+            <tr>
+                <th>Slot Waktu</th>
+                <th>Operator</th>
+                <th>Nilai Meteran</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="3">Belum ada data. Pilih tanggal untuk memuat.</td></tr>
+        </tbody>
+    </table>
+</div>
 
-            const fetchData = async (targetDate) => {
-                setSyncStatus("Memuat data...");
-                const local = getMergedLocalData(targetDate);
-                if (Object.keys(local.meteringData).length > 0) {
-                    setMeteringData(local.meteringData);
-                    setOperatorsBySlot(local.operatorsBySlot);
-                }
+<script>
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxo23MobXfSOK1u22fwiylixlOID5Y1xW0dXfVmsnJIiP2N21tQPPNHe2yyvn11ObH4/exec";
 
-                try {
-                    const res = await fetch(GOOGLE_SCRIPT_URL, {
-                        method: "POST",
-                        body: JSON.stringify({ action: "load", date: targetDate })
-                    });
-                    const result = await res.json();
-                    if (result && result.status === "success" && result.data) {
-                        const serverMetering = result.data.meteringData || {};
-                        const serverOps = result.data.operatorsBySlot || {};
+    let globalMeteringData = {};
+    let globalOperators = {};
 
-                        const mergedMetering = { ...serverMetering };
-                        Object.keys(local.meteringData).forEach(pId => {
-                            mergedMetering[pId] = {
-                                ...(serverMetering[pId] || {}),
-                                ...(local.meteringData[pId] || {})
-                            };
-                        });
+    document.addEventListener("DOMContentLoaded", () => {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById("reportDate").value = today;
+        loadData();
+    });
 
-                        setMeteringData(mergedMetering);
-                        setOperatorsBySlot({ ...serverOps, ...local.operatorsBySlot });
-                        setSyncStatus("Terkoneksi");
-                    }
-                } catch (err) {
-                    setSyncStatus("Mode Offline (Lokal)");
-                }
-            };
+    function showLoading(show) {
+        document.getElementById("loadingIndicator").style.display = show ? "block" : "none";
+    }
 
-            const handleSaveInput = () => {
-                if (!operatorName) {
-                    alert("Nama operator wajib diisi!");
-                    return;
-                }
+    function loadData() {
+        const targetDate = document.getElementById("reportDate").value;
+        if (!targetDate) return;
 
-                const paramId = "DefaultParam";
-                
-                setMeteringData(prev => ({
-                    ...prev,
-                    [paramId]: {
-                        ...(prev[paramId] || {}),
-                        [selectedSlot]: meterValue
-                    }
-                }));
+        showLoading(true);
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "load", date: targetDate })
+        })
+        .then(res => res.json())
+        .then(result => {
+            showLoading(false);
+            if (result.status === "success" && result.data) {
+                globalMeteringData = result.data.meteringData || {};
+                globalOperators = result.data.operatorsBySlot || {};
+            } else {
+                globalMeteringData = {};
+                globalOperators = {};
+            }
+            renderTable();
+        })
+        .catch(err => {
+            showLoading(false);
+            console.error("Gagal memuat:", err);
+        });
+    }
 
-                setOperatorsBySlot(prev => ({
-                    ...prev,
-                    [selectedSlot]: operatorName
-                }));
+    function saveData() {
+        const targetDate = document.getElementById("reportDate").value;
+        const operator = document.getElementById("operatorName").value;
+        const slot = document.getElementById("slotTime").value;
+        const value = document.getElementById("meterValue").value;
 
-                try {
-                    const slotKey = `metering_${date}_slot_${selectedSlot}`;
-                    const slotData = { [paramId]: meterValue };
-
-                    localStorage.setItem(slotKey, JSON.stringify({
-                        date,
-                        slot: selectedSlot,
-                        operator: operatorName,
-                        data: slotData,
-                        updatedAt: new Date().getTime()
-                    }));
-                } catch(e) {}
-
-                setSyncStatus("Menyimpan...");
-
-                if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-                syncTimeoutRef.current = setTimeout(async () => {
-                    try {
-                        const combined = getMergedLocalData(date);
-                        const payload = {
-                            status: "Submitted",
-                            meteringData: combined.meteringData,
-                            operatorsBySlot: combined.operatorsBySlot,
-                            updatedBy: operatorName
-                        };
-
-                        await fetch(GOOGLE_SCRIPT_URL, {
-                            method: "POST",
-                            body: JSON.stringify({ action: "save", date, payload })
-                        });
-                        setSyncStatus("Tersimpan di Drive");
-                    } catch(err) {
-                        setSyncStatus("Tersimpan di Lokal");
-                    }
-                }, 1000);
-
-                alert(`Data slot ${selectedSlot} berhasil disimpan!`);
-            };
-
-            return (
-                <div className="max-w-4xl mx-auto p-6 space-y-6">
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-                        <div className="flex justify-between items-center border-b pb-4">
-                            <h1 className="text-xl font-bold text-slate-900">Multi-User Daily Metering Report</h1>
-                            <span className="text-xs bg-slate-100 px-3 py-1 rounded-full font-semibold text-emerald-600">
-                                Status: {syncStatus}
-                            </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Tanggal</label>
-                                <input 
-                                    type="date" 
-                                    value={date} 
-                                    onChange={e => setDate(e.target.value)}
-                                    className="w-full p-2.5 border rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Nama Operator</label>
-                                <input 
-                                    type="text" 
-                                    value={operatorName} 
-                                    placeholder="Contoh: Muammar / Murjani"
-                                    onChange={e => setOperatorName(e.target.value)}
-                                    className="w-full p-2.5 border rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Pilih Jam / Slot</label>
-                                <select 
-                                    value={selectedSlot} 
-                                    onChange={e => {
-                                        setSelectedSlot(e.target.value);
-                                        const existingVal = meteringData["DefaultParam"]?.[e.target.value] || "";
-                                        setMeterValue(existingVal);
-                                    }}
-                                    className="w-full p-2.5 border rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-blue-600"
-                                >
-                                    {TIME_SLOTS.map(slot => (
-                                        <option key={slot} value={slot}>Slot Jam {slot}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Nilai Metering (Slot {selectedSlot})</label>
-                            <input 
-                                type="number" 
-                                value={meterValue} 
-                                placeholder="Masukkan angka meteran..."
-                                onChange={e => setMeterValue(e.target.value)}
-                                className="w-full p-3 border rounded-lg text-base bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold" 
-                            />
-                        </div>
-
-                        <button 
-                            onClick={handleSaveInput}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow transition"
-                        >
-                            Simpan Input Jam {selectedSlot}
-                        </button>
-                    </div>
-
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-6 space-y-4">
-                        <h3 className="font-bold text-slate-800 text-base">Rekapitulasi Semua Slot Waktu (Multi-User)</h3>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-xs text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-slate-100 text-slate-700 uppercase border-b">
-                                        <th className="p-3 font-bold border-r">Slot Waktu</th>
-                                        <th className="p-3 font-bold border-r">Petugas On Duty</th>
-                                        <th className="p-3 font-bold">Nilai Meteran</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-200">
-                                    {TIME_SLOTS.map(slot => {
-                                        const op = operatorsBySlot[slot] || "-";
-                                        const val = meteringData["DefaultParam"]?.[slot] ?? "-";
-                                        return (
-                                            <tr key={slot} className={slot === selectedSlot ? "bg-blue-50/50 font-bold" : "hover:bg-slate-50"}>
-                                                <td className="p-3 border-r font-mono text-slate-700">{slot}</td>
-                                                <td className="p-3 border-r text-slate-600">{op}</td>
-                                                <td className="p-3 text-slate-900">{val}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            );
+        if (!targetDate || !operator) {
+            alert("Tanggal dan Nama Operator wajib diisi!");
+            return;
         }
 
-        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-    </script>
+        if (!globalMeteringData["DefaultParam"]) {
+            globalMeteringData["DefaultParam"] = {};
+        }
+        if (value !== "") {
+            globalMeteringData["DefaultParam"][slot] = value;
+        }
+        globalOperators[slot] = operator;
+
+        const payload = {
+            status: "Submitted",
+            meteringData: globalMeteringData,
+            operatorsBySlot: globalOperators,
+            updatedBy: operator
+        };
+
+        showLoading(true);
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "save", date: targetDate, payload: payload })
+        })
+        .then(res => res.json())
+        .then(result => {
+            showLoading(false);
+            if (result.status === "success") {
+                alert("Data berhasil disimpan!");
+                loadData();
+            } else {
+                alert("Gagal menyimpan: " + result.message);
+            }
+        })
+        .catch(err => {
+            showLoading(false);
+            alert("Terjadi kesalahan jaringan.");
+        });
+    }
+
+    function renderTable() {
+        const tbody = document.querySelector("#recapTable tbody");
+        tbody.innerHTML = "";
+
+        const slots = ["00:00", "02:00", "04:00", "06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00", "22:00"];
+        
+        let hasData = false;
+        slots.forEach(slot => {
+            const op = globalOperators[slot] || "-";
+            const val = (globalMeteringData["DefaultParam"] && globalMeteringData["DefaultParam"][slot]) !== undefined 
+                        ? globalMeteringData["DefaultParam"][slot] : "-";
+
+            if (op !== "-" || val !== "-") {
+                hasData = true;
+            }
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td><b>${slot}</b></td><td>${op}</td><td>${val}</td>`;
+            tbody.appendChild(tr);
+        });
+
+        if (!hasData) {
+            tbody.innerHTML = `<tr><td colspan="3">Belum ada data tercatat untuk tanggal ini.</td></tr>`;
+        }
+    }
+</script>
+
 </body>
 </html>
