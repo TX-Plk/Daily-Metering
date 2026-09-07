@@ -47,7 +47,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyViJuWBY5MuP2ov98Mf92QuzH4eow4CJ17nC1KosbsErXXnaBJYqMVNO2wY2iJS2_D/exec";
 
@@ -104,6 +104,49 @@
             return `${year}-${month}-${day}`;
         };
 
+        // Fungsi menggabungkan data lokal (multi-slot) secara aman
+        const getMergedLocalData = (targetDate) => {
+            let combinedMetering = {};
+            let combinedOps = {};
+
+            // 1. Ambil dari format per slot terlebih dahulu
+            TIME_SLOTS.forEach(slot => {
+                const slotKey = `metering_${targetDate}_slot_${slot}`;
+                const raw = localStorage.getItem(slotKey);
+                if (raw) {
+                    try {
+                        const parsed = JSON.parse(raw);
+                        if (parsed.data) {
+                            Object.keys(parsed.data).forEach(pId => {
+                                if (!combinedMetering[pId]) combinedMetering[pId] = {};
+                                combinedMetering[pId][slot] = parsed.data[pId];
+                            });
+                        }
+                        if (parsed.operator) combinedOps[slot] = parsed.operator;
+                    } catch(e){}
+                }
+            });
+
+            // 2. Fallback dari backup legacy jika ada
+            const legacyRaw = localStorage.getItem(`metering_backup_${targetDate}`);
+            if (legacyRaw) {
+                try {
+                    const legacy = JSON.parse(legacyRaw);
+                    if (legacy.meteringData) {
+                        Object.keys(legacy.meteringData).forEach(pId => {
+                            if (!combinedMetering[pId]) combinedMetering[pId] = {};
+                            combinedMetering[pId] = { ...legacy.meteringData[pId], ...combinedMetering[pId] };
+                        });
+                    }
+                    if (legacy.operatorsBySlot) {
+                        combinedOps = { ...legacy.operatorsBySlot, ...combinedOps };
+                    }
+                } catch(e){}
+            }
+
+            return { meteringData: combinedMetering, operatorsBySlot: combinedOps };
+        };
+
         const LogoMNC = ({ className = "h-8" }) => (
             <div className={`${className} flex items-center justify-center bg-blue-900 text-white font-black px-2 py-1 rounded border border-blue-400 text-xs shadow-sm`}>
                 MNC
@@ -139,6 +182,7 @@
             const [meteringData, setMeteringData] = useState({});
             const [operatorsBySlot, setOperatorsBySlot] = useState({});
 
+            const syncTimeoutRef = useRef(null);
             const isFormLocked = (status === "Submitted" || status === "Approved") && user?.role !== "admin";
 
             useEffect(() => {
@@ -156,23 +200,17 @@
                 }
             }, [date, user]);
 
-            // PERBAIKAN: Fungsi pengambilan data dengan proteksi Penyimpanan Sementara (LocalStorage)
+            // FUNGSI MEMUAT DATA AMAN MULTI-USER
             const fetchLatestDataFromDrive = async (targetDate) => {
                 setAutoSyncStatus("Memuat data...");
                 
-                // 1. Muat dulu data dari penyimpanan lokal jika ada
-                const localBackup = localStorage.getItem(`metering_backup_${targetDate}`);
-                let localData = null;
-                if (localBackup) {
-                    try {
-                        localData = JSON.parse(localBackup);
-                        setMeteringData(localData.meteringData || {});
-                        setOperatorsBySlot(localData.operatorsBySlot || {});
-                        setStatus(localData.status || "Draft");
-                    } catch(e){}
+                // Ambil data lokal gabungan dari penyimpanan slot mandiri
+                const localCombined = getMergedLocalData(targetDate);
+                if (Object.keys(localCombined.meteringData).length > 0) {
+                    setMeteringData(localCombined.meteringData);
+                    setOperatorsBySlot(localCombined.operatorsBySlot);
                 }
 
-                // 2. Ambil data dari Drive dan gabungkan tanpa menghapus inputan lokal sementara
                 try {
                     const res = await fetch(GOOGLE_SCRIPT_URL, {
                         method: "POST",
@@ -182,42 +220,31 @@
                     });
                     const result = await res.json();
                     
-                    if (result.status === "success" && result.data) {
+                    if (result && result.status === "success" && result.data) {
                         const driveMetering = result.data.meteringData || {};
                         const driveOps = result.data.operatorsBySlot || {};
                         
-                        // Merge: gabungkan data drive dengan data lokal agar jam 00-06 tidak hilang
+                        // Merge aman: utamakan data lokal yang baru diketik di slot masing-masing
                         const mergedMetering = { ...driveMetering };
-                        Object.keys(localData?.meteringData || {}).forEach(paramId => {
-                            mergedMetering[paramId] = {
-                                ...(driveMetering[paramId] || {}),
-                                ...(localData?.meteringData?.[paramId] || {})
+                        Object.keys(localCombined.meteringData).forEach(pId => {
+                            mergedMetering[pId] = {
+                                ...(driveMetering[pId] || {}),
+                                ...(localCombined.meteringData[pId] || {})
                             };
                         });
 
-                        const mergedOps = { ...driveOps, ...(localData?.operatorsBySlot || {}) };
+                        const mergedOps = { ...driveOps, ...localCombined.operatorsBySlot };
 
                         setMeteringData(mergedMetering);
                         setOperatorsBySlot(mergedOps);
-                        setStatus(result.data.status || localData?.status || "Draft");
+                        setStatus(result.data.status || "Draft");
                         setRejectReason(result.data.rejectReason || "");
-                        setAutoSyncStatus("Tersinkronisasi dengan Drive");
+                        setAutoSyncStatus("Data Terkoneksi & Tersimpan");
                     } else {
-                        if (localData) {
-                            setAutoSyncStatus("Menggunakan data sementara (Lokal)");
-                        } else {
-                            setMeteringData({});
-                            setOperatorsBySlot({});
-                            setStatus("Draft");
-                            setAutoSyncStatus("Data baru (kosong)");
-                        }
+                        setAutoSyncStatus("Data lokal siap (Drive Kosong)");
                     }
                 } catch (err) {
-                    if (localData) {
-                        setAutoSyncStatus("Offline (Memakai Penyimpanan Lokal)");
-                    } else {
-                        setAutoSyncStatus("Gagal memuat dari Drive");
-                    }
+                    setAutoSyncStatus("Mode Offline (Memakai Penyimpanan Lokal)");
                 }
             };
 
@@ -279,44 +306,69 @@
                 }, 1500);
             };
 
-            // PERBAIKAN: Penyimpan sementara otomatis ke LocalStorage setiap kali diinput
-            const handleInputChange = async (paramId, timeSlot, value) => {
+            // PERBAIKAN UTAMA: INPUT DENGAN ISOLASI SLOT PER-USER & DEBOUNCE SYNC
+            const handleInputChange = (paramId, timeSlot, value) => {
                 if (isFormLocked) return;
                 
-                const updatedData = {
-                    ...meteringData,
+                // 1. Update React State Lokal secara efisien
+                setMeteringData(prev => ({
+                    ...prev,
                     [paramId]: {
-                        ...(meteringData[paramId] || {}),
+                        ...(prev[paramId] || {}),
                         [timeSlot]: value
                     }
-                };
-
-                const updatedOps = {
-                    ...operatorsBySlot,
-                    [timeSlot]: user.name
-                };
-
-                setMeteringData(updatedData);
-                setOperatorsBySlot(updatedOps);
-
-                // SIMPAN LANGSUNG KE PENYIMPANAN SEMENTARA BROWSER
-                localStorage.setItem(`metering_backup_${date}`, JSON.stringify({
-                    date, status, meteringData: updatedData, operatorsBySlot: updatedOps
                 }));
 
+                setOperatorsBySlot(prev => ({
+                    ...prev,
+                    [timeSlot]: user.name
+                }));
+
+                // 2. Simpan secara ATOMIC per slot di LocalStorage (Tidak bentrok walau 3 user bersamaan)
                 try {
-                    setAutoSyncStatus("Menyimpan...");
-                    const payload = { date, status, rejectReason, meteringData: updatedData, operatorsBySlot: updatedOps, updatedBy: user.name };
-                    await fetch(GOOGLE_SCRIPT_URL, {
-                        method: "POST",
-                        headers: { "Content-Type": "text/plain;charset=utf-8" },
-                        body: JSON.stringify({ action: "save", date, payload }),
-                        redirect: "follow"
-                    });
-                    setAutoSyncStatus("Tersimpan di Drive & Lokal");
-                } catch(e) {
-                    setAutoSyncStatus("Tersimpan di Penyimpanan Sementara (Lokal)");
-                }
+                    const slotKey = `metering_${date}_slot_${timeSlot}`;
+                    const rawSlot = localStorage.getItem(slotKey);
+                    let slotData = rawSlot ? JSON.parse(rawSlot).data || {} : {};
+                    slotData[paramId] = value;
+
+                    localStorage.setItem(slotKey, JSON.stringify({
+                        date,
+                        slot: timeSlot,
+                        operator: user.name,
+                        data: slotData,
+                        updatedAt: new Date().getTime()
+                    }));
+                } catch(e) {}
+
+                setAutoSyncStatus("Menyimpan ke browser...");
+
+                // 3. Debounce kirim ke Drive (Menghindari crash akibat request bertabrakan)
+                if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+                
+                syncTimeoutRef.current = setTimeout(async () => {
+                    try {
+                        setAutoSyncStatus("Menyimpan ke Drive...");
+                        const combined = getMergedLocalData(date);
+                        const payload = { 
+                            date, 
+                            status, 
+                            rejectReason, 
+                            meteringData: combined.meteringData, 
+                            operatorsBySlot: combined.operatorsBySlot, 
+                            updatedBy: user.name 
+                        };
+                        
+                        await fetch(GOOGLE_SCRIPT_URL, {
+                            method: "POST",
+                            headers: { "Content-Type": "text/plain;charset=utf-8" },
+                            body: JSON.stringify({ action: "save", date, payload }),
+                            redirect: "follow"
+                        });
+                        setAutoSyncStatus("Tersimpan di Drive & Lokal");
+                    } catch(e) {
+                        setAutoSyncStatus("Tersimpan di Lokal (Offline)");
+                    }
+                }, 1200); // Tunda 1.2 detik setelah selesai mengetik
             };
 
             const handleSubmitReport = async () => {
@@ -325,7 +377,8 @@
                 setDriveLoading(true);
                 const targetStatus = "Submitted";
                 try {
-                    const payload = { date, status: targetStatus, rejectReason: "", meteringData, operatorsBySlot, updatedBy: user.name };
+                    const combined = getMergedLocalData(date);
+                    const payload = { date, status: targetStatus, rejectReason: "", meteringData: combined.meteringData, operatorsBySlot: combined.operatorsBySlot, updatedBy: user.name };
                     const res = await fetch(GOOGLE_SCRIPT_URL, {
                         method: "POST",
                         headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -333,14 +386,11 @@
                         redirect: "follow"
                     });
                     const result = await res.json();
-                    if (result.status === "success") {
+                    if (result && result.status === "success") {
                         setStatus(targetStatus);
-                        localStorage.setItem(`metering_backup_${date}`, JSON.stringify({
-                            date, status: targetStatus, meteringData, operatorsBySlot
-                        }));
                         alert("Laporan berhasil disubmit dan telah TERKUNCI!");
                     } else {
-                        alert("Gagal submit: " + result.message);
+                        alert("Gagal submit: " + (result?.message || "Error server"));
                     }
                 } catch (err) {
                     alert("Gagal terhubung ke Google Drive saat submit.");
@@ -367,10 +417,10 @@
                         redirect: "follow"
                     });
                     const result = await res.json();
-                    if (result.status === "success") {
+                    if (result && result.status === "success") {
                         alert(result.message || "PDF berhasil diunggah!");
                     } else {
-                        alert("Gagal upload PDF: " + result.message);
+                        alert("Gagal upload PDF: " + (result?.message || "Error"));
                     }
                 } catch (err) {
                     alert("Gagal mengunggah PDF.");
@@ -396,10 +446,10 @@
                         redirect: "follow"
                     });
                     const result = await res.json();
-                    if (result.status === "success") {
+                    if (result && result.status === "success") {
                         alert(result.message || "File Excel berhasil disimpan!");
                     } else {
-                        alert("Gagal menyimpan Excel: " + result.message);
+                        alert("Gagal menyimpan Excel: " + (result?.message || "Error"));
                     }
                 } catch (err) {
                     alert("Gagal terhubung ke Google Drive.");
@@ -419,10 +469,10 @@
                         redirect: "follow"
                     });
                     const result = await res.json();
-                    if (result.status === "success") {
+                    if (result && result.status === "success") {
                         alert(result.message);
                     } else {
-                        alert("Gagal rekap bulanan Excel: " + result.message);
+                        alert("Gagal rekap bulanan Excel: " + (result?.message || "Error"));
                     }
                 } catch (err) {
                     alert("Gagal terhubung ke Google Drive.");
@@ -442,10 +492,10 @@
                         redirect: "follow"
                     });
                     const result = await res.json();
-                    if (result.status === "success") {
+                    if (result && result.status === "success") {
                         alert(result.message);
                     } else {
-                        alert("Gagal rekap bulanan PDF: " + result.message);
+                        alert("Gagal rekap bulanan PDF: " + (result?.message || "Error"));
                     }
                 } catch (err) {
                     alert("Gagal terhubung ke Google Drive.");
@@ -465,7 +515,7 @@
                         redirect: "follow"
                     });
                     const result = await res.json();
-                    if (result.status === "success") {
+                    if (result && result.status === "success") {
                         setPdfHistory(result.pdfs || []);
                     } else {
                         alert("Gagal mengambil riwayat file.");
@@ -478,6 +528,7 @@
             };
 
             const sanitizeNumberInput = (val) => {
+                if (typeof val !== 'string') return val;
                 let cleaned = val.replace(',', '.');
                 cleaned = cleaned.replace(/[^0-9.-]/g, '');
                 const parts = cleaned.split('.');
@@ -648,7 +699,7 @@
                             </div>
                             <div className="flex items-center space-x-3 text-sm">
                                 <span className="text-[11px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded border border-slate-700 font-medium">
-                                    💾 Status: <strong className="text-emerald-400">{autoSyncStatus || "Siap"}</strong>
+                                    💾 <strong className="text-emerald-400">{autoSyncStatus || "Siap"}</strong>
                                 </span>
                                 <button 
                                     onClick={() => setViewMode(viewMode === "matrix" ? "mobile" : "matrix")} 
@@ -722,7 +773,6 @@
                                             onClick={handleExportMonthlyExcel} 
                                             disabled={driveLoading}
                                             className="bg-lime-600 hover:bg-lime-700 text-white px-3 py-2 rounded-lg text-sm font-semibold shadow-sm flex items-center gap-1 disabled:opacity-50"
-                                            title="Merekap seluruh file 30 hari bulan ini ke dalam Excel"
                                         >
                                             📊 {driveLoading ? "Proses..." : "Rekap Bulanan Excel"}
                                         </button>
@@ -731,7 +781,6 @@
                                             onClick={handleExportMonthlyPdf} 
                                             disabled={driveLoading}
                                             className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 rounded-lg text-sm font-semibold shadow-sm flex items-center gap-1 disabled:opacity-50"
-                                            title="Merekap seluruh file 30 hari bulan ini ke dalam 1 File PDF"
                                         >
                                             📄 {driveLoading ? "Proses..." : "Rekap Bulanan PDF"}
                                         </button>
@@ -825,7 +874,7 @@
                                 <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center no-print">
                                     <h3 className="font-bold text-slate-800 text-sm">Tabel Matrix Daily Report Metering (All Channels)</h3>
                                     <span className="text-xs text-slate-500">
-                                        💡 Navigasi antar sel menggunakan tombol <code className="bg-slate-200 px-1 rounded font-bold">Tab</code> atau <code className="bg-slate-200 px-1 rounded font-bold">↑ ↓ ← →</code>.
+                                        💡 Navigasi antar sel menggunakan <code className="bg-slate-200 px-1 rounded font-bold">Tab</code> atau <code className="bg-slate-200 px-1 rounded font-bold">↑ ↓ ← →</code>.
                                     </span>
                                 </div>
 
@@ -857,7 +906,7 @@
                                                                     </td>
                                                                     <td className="p-1.5 text-center text-slate-400 border-r">{param.unit}</td>
                                                                     {TIME_SLOTS.map((slot, slotIndex) => {
-                                                                        const val = meteringData[param.id]?.[slot] || "";
+                                                                        const val = meteringData?.[param.id]?.[slot] ?? "";
                                                                         const isWarn = param.warnMax && parseFloat(val) > param.warnMax;
                                                                         const calculatedTabIndex = getTabIndex(slotIndex, currentParamIndex);
                                                                         
@@ -952,7 +1001,7 @@
                                         </div>
                                         <div className="p-4 divide-y divide-slate-100">
                                             {cat.items.map(param => {
-                                                const val = meteringData[param.id]?.[selectedSlot] || "";
+                                                const val = meteringData?.[param.id]?.[selectedSlot] ?? "";
                                                 const isWarn = param.warnMax && parseFloat(val) > param.warnMax;
                                                 return (
                                                     <div key={param.id} className="py-2.5 flex items-center justify-between gap-4">
