@@ -152,27 +152,27 @@
 
             useEffect(() => {
                 if (user) {
-                    setMeteringData({});
-                    setOperatorsBySlot({});
-                    setStatus("Draft");
-                    setRejectReason("");
-
-                    const localBackup = localStorage.getItem(`metering_backup_${date}`);
-                    if (localBackup) {
-                        try {
-                            const parsed = JSON.parse(localBackup);
-                            setMeteringData(parsed.meteringData || {});
-                            setOperatorsBySlot(parsed.operatorsBySlot || {});
-                            setStatus(parsed.status || "Draft");
-                        } catch(e){}
-                    }
-
                     fetchLatestDataFromDrive(date);
                 }
             }, [date, user]);
 
+            // PERBAIKAN: Fungsi pengambilan data dengan proteksi Penyimpanan Sementara (LocalStorage)
             const fetchLatestDataFromDrive = async (targetDate) => {
                 setAutoSyncStatus("Memuat data...");
+                
+                // 1. Muat dulu data dari penyimpanan lokal jika ada
+                const localBackup = localStorage.getItem(`metering_backup_${targetDate}`);
+                let localData = null;
+                if (localBackup) {
+                    try {
+                        localData = JSON.parse(localBackup);
+                        setMeteringData(localData.meteringData || {});
+                        setOperatorsBySlot(localData.operatorsBySlot || {});
+                        setStatus(localData.status || "Draft");
+                    } catch(e){}
+                }
+
+                // 2. Ambil data dari Drive dan gabungkan tanpa menghapus inputan lokal sementara
                 try {
                     const res = await fetch(GOOGLE_SCRIPT_URL, {
                         method: "POST",
@@ -181,21 +181,43 @@
                         redirect: "follow"
                     });
                     const result = await res.json();
+                    
                     if (result.status === "success" && result.data) {
-                        setMeteringData(result.data.meteringData || {});
-                        setOperatorsBySlot(result.data.operatorsBySlot || {});
-                        setStatus(result.data.status || "Draft");
+                        const driveMetering = result.data.meteringData || {};
+                        const driveOps = result.data.operatorsBySlot || {};
+                        
+                        // Merge: gabungkan data drive dengan data lokal agar jam 00-06 tidak hilang
+                        const mergedMetering = { ...driveMetering };
+                        Object.keys(localData?.meteringData || {}).forEach(paramId => {
+                            mergedMetering[paramId] = {
+                                ...(driveMetering[paramId] || {}),
+                                ...(localData?.meteringData?.[paramId] || {})
+                            };
+                        });
+
+                        const mergedOps = { ...driveOps, ...(localData?.operatorsBySlot || {}) };
+
+                        setMeteringData(mergedMetering);
+                        setOperatorsBySlot(mergedOps);
+                        setStatus(result.data.status || localData?.status || "Draft");
                         setRejectReason(result.data.rejectReason || "");
-                        setAutoSyncStatus("Data tersinkronisasi");
+                        setAutoSyncStatus("Tersinkronisasi dengan Drive");
                     } else {
-                        setMeteringData({});
-                        setOperatorsBySlot({});
-                        setStatus("Draft");
-                        setRejectReason("");
-                        setAutoSyncStatus("Data baru (kosong)");
+                        if (localData) {
+                            setAutoSyncStatus("Menggunakan data sementara (Lokal)");
+                        } else {
+                            setMeteringData({});
+                            setOperatorsBySlot({});
+                            setStatus("Draft");
+                            setAutoSyncStatus("Data baru (kosong)");
+                        }
                     }
                 } catch (err) {
-                    setAutoSyncStatus("Gagal memuat dari Drive");
+                    if (localData) {
+                        setAutoSyncStatus("Offline (Memakai Penyimpanan Lokal)");
+                    } else {
+                        setAutoSyncStatus("Gagal memuat dari Drive");
+                    }
                 }
             };
 
@@ -257,6 +279,7 @@
                 }, 1500);
             };
 
+            // PERBAIKAN: Penyimpan sementara otomatis ke LocalStorage setiap kali diinput
             const handleInputChange = async (paramId, timeSlot, value) => {
                 if (isFormLocked) return;
                 
@@ -276,12 +299,13 @@
                 setMeteringData(updatedData);
                 setOperatorsBySlot(updatedOps);
 
+                // SIMPAN LANGSUNG KE PENYIMPANAN SEMENTARA BROWSER
                 localStorage.setItem(`metering_backup_${date}`, JSON.stringify({
                     date, status, meteringData: updatedData, operatorsBySlot: updatedOps
                 }));
 
                 try {
-                    setAutoSyncStatus("Menyimpan ke Drive...");
+                    setAutoSyncStatus("Menyimpan...");
                     const payload = { date, status, rejectReason, meteringData: updatedData, operatorsBySlot: updatedOps, updatedBy: user.name };
                     await fetch(GOOGLE_SCRIPT_URL, {
                         method: "POST",
@@ -289,9 +313,9 @@
                         body: JSON.stringify({ action: "save", date, payload }),
                         redirect: "follow"
                     });
-                    setAutoSyncStatus("Data tersimpan di Drive");
+                    setAutoSyncStatus("Tersimpan di Drive & Lokal");
                 } catch(e) {
-                    setAutoSyncStatus("Tersimpan di Lokal (Gagal ke Drive)");
+                    setAutoSyncStatus("Tersimpan di Penyimpanan Sementara (Lokal)");
                 }
             };
 
@@ -311,6 +335,9 @@
                     const result = await res.json();
                     if (result.status === "success") {
                         setStatus(targetStatus);
+                        localStorage.setItem(`metering_backup_${date}`, JSON.stringify({
+                            date, status: targetStatus, meteringData, operatorsBySlot
+                        }));
                         alert("Laporan berhasil disubmit dan telah TERKUNCI!");
                     } else {
                         alert("Gagal submit: " + result.message);
@@ -620,8 +647,8 @@
                                 </div>
                             </div>
                             <div className="flex items-center space-x-3 text-sm">
-                                <span className="text-[11px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700 font-medium">
-                                    🔄 {autoSyncStatus || "Siap"}
+                                <span className="text-[11px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded border border-slate-700 font-medium">
+                                    💾 Status: <strong className="text-emerald-400">{autoSyncStatus || "Siap"}</strong>
                                 </span>
                                 <button 
                                     onClick={() => setViewMode(viewMode === "matrix" ? "mobile" : "matrix")} 
@@ -798,7 +825,7 @@
                                 <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center no-print">
                                     <h3 className="font-bold text-slate-800 text-sm">Tabel Matrix Daily Report Metering (All Channels)</h3>
                                     <span className="text-xs text-slate-500">
-                                        💡 Gunakan tombol <code className="bg-slate-200 px-1 rounded font-bold">Tab</code> / <code className="bg-slate-200 px-1 rounded font-bold">↑ ↓ ← →</code> untuk navigasi antar sel.
+                                        💡 Navigasi antar sel menggunakan tombol <code className="bg-slate-200 px-1 rounded font-bold">Tab</code> atau <code className="bg-slate-200 px-1 rounded font-bold">↑ ↓ ← →</code>.
                                     </span>
                                 </div>
 
