@@ -1142,4 +1142,60 @@ async function exportMonthlyPDFFromFirestore(selectedMonthYear) {
     console.error("Terjadi kesalahan:", error);
     alert("Gagal memproses ekspor PDF.");
   }
+}async function exportMonthlyPDFFromFirestore(selectedMonthYear) {
+  try {
+    console.log("Mengambil data dari Firestore...");
+    
+    // 1. Ambil data koleksi 'reports' dari Firestore
+    const querySnapshot = await db.collection("reports").get();
+    let reportsArray = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (doc.id.startsWith(selectedMonthYear)) {
+        reportsArray.push({
+          date: doc.id,
+          operator: data.operatorsBySlot ? Object.values(data.operatorsBySlot)[0] : "Operator",
+          outputTx: data.meteringData?.outputTx || "0",
+          voltase: data.meteringData?.voltaseLine || "0",
+          suhu: data.meteringData?.suhuPanel || "0",
+          status: data.status || "Submitted",
+          note: data.meteringData?.note || "-"
+        });
+      }
+    });
+
+    if (reportsArray.length === 0) {
+      alert("Tidak ada data laporan untuk periode tersebut!");
+      return;
+    }
+
+    console.log("Mengirim data ke Google Apps Script...");
+
+    // 2. Kirim data ke Google Apps Script Web App URL
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwc-Sgrdzn6l06IV_RPNtDF-pieRVZywNtFxwa29cCQpN9jSVTPMI9XIii61DgyOMSTYA/exec";
+    
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "generateMonthlyPDF", // <--- Pastikan nilai action ini sama persis dengan di backend (Code.gs)
+        month: selectedMonthYear,
+        reports: reportsArray
+      }),
+      redirect: "follow"
+    });
+
+    const result = await response.json();
+    if (result.status === "success") {
+      alert("Sukses! File PDF rekap bulanan telah dibuat.");
+      window.open(result.fileUrl, "_blank"); // Membuka file PDF di tab baru
+    } else {
+      alert("Gagal membuat PDF: " + result.message);
+    }
+
+  } catch (error) {
+    console.error("Terjadi kesalahan:", error);
+    alert("Gagal memproses ekspor PDF.");
+  }
 }
