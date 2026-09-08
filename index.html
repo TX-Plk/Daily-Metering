@@ -15,7 +15,7 @@
     <!-- FIREBASE SDK MODULAR & CONFIG -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCyPLlqTnIrGX-lsx5cL8V5a75x4neP7zA",
@@ -33,7 +33,7 @@
 
         // Menyimpan instance ke window agar bisa diakses oleh komponen React di bawah
         window.firebaseDb = db;
-        window.FirebaseFirestoreHelpers = { doc, setDoc, getDoc, onSnapshot };
+        window.FirebaseFirestoreHelpers = { doc, setDoc, getDoc, onSnapshot, collection, getDocs };
     </script>
     
     <!-- CSS FORMAT CETAK 1 HALAMAN LANDSCAPE -->
@@ -342,7 +342,6 @@
                 setMeteringData(updatedData);
                 setOperatorsBySlot(updatedOps);
 
-                // Kirim otomatis ke Firebase Firestore
                 saveToCloud(date, status, updatedData, updatedOps, rejectReason);
             };
 
@@ -409,24 +408,66 @@
                 }
             };
 
+            // PERBAIKAN UTAMA: Disesuaikan dengan backend (action: "generateMonthlyPDF")
             const handleExportMonthlyPdf = async () => {
-                const monthYear = date.substring(0, 7);
+                const monthYear = date.substring(0, 7); // Format "YYYY-MM"
                 setDriveLoading(true);
                 try {
+                    console.log("Mengambil data rekap bulanan dari Firestore untuk bulan:", monthYear);
+                    const db = window.firebaseDb;
+                    const { collection, getDocs } = window.FirebaseFirestoreHelpers;
+                    
+                    const querySnapshot = await getDocs(collection(db, "reports"));
+                    let reportsArray = [];
+
+                    querySnapshot.forEach((docSnap) => {
+                        const docId = docSnap.id;
+                        if (docId.startsWith(monthYear)) {
+                            const data = docSnap.data();
+                            const firstOp = data.operatorsBySlot ? Object.values(data.operatorsBySlot)[0] : "Operator";
+                            reportsArray.push({
+                                date: docId,
+                                operator: firstOp || "Operator",
+                                outputTx: data.meteringData?.rcti_pwr?.["08:00"] || data.meteringData?.outputTx || "0",
+                                voltase: data.meteringData?.voltase || "220",
+                                suhu: data.meteringData?.suhu || "35",
+                                status: data.status || "Submitted",
+                                note: data.rejectReason || "Normal"
+                            });
+                        }
+                    });
+
+                    if (reportsArray.length === 0) {
+                        alert("Tidak ada data laporan untuk periode bulan " + monthYear + "!");
+                        setDriveLoading(false);
+                        return;
+                    }
+
+                    console.log("Mengirim rekap data ke Google Apps Script backend...", reportsArray);
+
                     const res = await fetch(GOOGLE_SCRIPT_URL, {
                         method: "POST",
                         headers: { "Content-Type": "text/plain;charset=utf-8" },
-                        body: JSON.stringify({ action: "export_monthly_pdf", monthYear: monthYear, parameters: PARAMETERS }),
+                        body: JSON.stringify({ 
+                            action: "generateMonthlyPDF", 
+                            month: monthYear, 
+                            reports: reportsArray 
+                        }),
                         redirect: "follow"
                     });
+
                     const result = await res.json();
                     if (result.status === "success") {
-                        alert(result.message);
+                        alert("Sukses! File PDF rekap bulanan berhasil dibuat di Google Drive.");
+                        if (result.fileUrl) {
+                            window.open(result.fileUrl, "_blank");
+                        }
                     } else {
-                        alert("Gagal rekap bulanan PDF: " + result.message);
+                        alert("Gagal rekap bulanan PDF: " + (result.message || "Kesalahan tidak dikenal"));
                     }
                 } catch (err) {
-                    alert("Gagal terhubung ke Google Drive.");
+                    console.error("Error:", err);
+                    alert("Gagal terhubung ke server atau memproses rekap PDF bulanan.");
                 } finally {
                     setDriveLoading(false);
                 }
@@ -1087,115 +1128,3 @@
     </script>
 </body>
 </html>
-async function exportMonthlyPDFFromFirestore(selectedMonthYear) {
-  try {
-    console.log("Mengambil data dari Firestore...");
-    
-    // 1. Ambil data koleksi 'reports' dari Firestore
-    const querySnapshot = await db.collection("reports").get();
-    let reportsArray = [];
-
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      // Filter berdasarkan bulan jika diperlukan (misal: "2026-08")
-      if (doc.id.startsWith(selectedMonthYear)) {
-        reportsArray.push({
-          date: doc.id,
-          operator: data.operatorsBySlot ? Object.values(data.operatorsBySlot)[0] : "Operator",
-          outputTx: data.meteringData?.outputTx || "0",
-          voltase: data.meteringData?.voltaseLine || "0",
-          suhu: data.meteringData?.suhuPanel || "0",
-          status: data.status || "Submitted",
-          note: data.meteringData?.note || "-"
-        });
-      }
-    });
-
-    if (reportsArray.length === 0) {
-      alert("Tidak ada data laporan untuk periode tersebut!");
-      return;
-    }
-
-    console.log("Mengirim data ke Google Apps Script untuk digenerate menjadi PDF...");
-
-    // 2. Kirim data ke Google Apps Script Web App URL
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwc-Sgrdzn6l06IV_RPNtDF-pieRVZywNtFxwa29cCQpN9jSVTPMI9XIii61DgyOMSTYA/exec";
-    
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "generateMonthlyPDF",
-        month: selectedMonthYear,
-        reports: reportsArray
-      })
-    });
-
-    const result = await response.json();
-    if (result.status === "success") {
-      alert("Sukses! File PDF rekap bulanan telah diunggah ke Google Drive.");
-      window.open(result.fileUrl, "_blank"); // Buka file PDF di tab baru
-    } else {
-      alert("Gagal membuat PDF: " + result.message);
-    }
-
-  } catch (error) {
-    console.error("Terjadi kesalahan:", error);
-    alert("Gagal memproses ekspor PDF.");
-  }
-}async function exportMonthlyPDFFromFirestore(selectedMonthYear) {
-  try {
-    console.log("Mengambil data dari Firestore...");
-    
-    // 1. Ambil data koleksi 'reports' dari Firestore
-    const querySnapshot = await db.collection("reports").get();
-    let reportsArray = [];
-
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      if (doc.id.startsWith(selectedMonthYear)) {
-        reportsArray.push({
-          date: doc.id,
-          operator: data.operatorsBySlot ? Object.values(data.operatorsBySlot)[0] : "Operator",
-          outputTx: data.meteringData?.outputTx || "0",
-          voltase: data.meteringData?.voltaseLine || "0",
-          suhu: data.meteringData?.suhuPanel || "0",
-          status: data.status || "Submitted",
-          note: data.meteringData?.note || "-"
-        });
-      }
-    });
-
-    if (reportsArray.length === 0) {
-      alert("Tidak ada data laporan untuk periode tersebut!");
-      return;
-    }
-
-    console.log("Mengirim data ke Google Apps Script...");
-
-    // 2. Kirim data ke Google Apps Script Web App URL
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwc-Sgrdzn6l06IV_RPNtDF-pieRVZywNtFxwa29cCQpN9jSVTPMI9XIii61DgyOMSTYA/exec";
-    
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        action: "generateMonthlyPDF", // <--- Pastikan nilai action ini sama persis dengan di backend (Code.gs)
-        month: selectedMonthYear,
-        reports: reportsArray
-      }),
-      redirect: "follow"
-    });
-
-    const result = await response.json();
-    if (result.status === "success") {
-      alert("Sukses! File PDF rekap bulanan telah dibuat.");
-      window.open(result.fileUrl, "_blank"); // Membuka file PDF di tab baru
-    } else {
-      alert("Gagal membuat PDF: " + result.message);
-    }
-
-  } catch (error) {
-    console.error("Terjadi kesalahan:", error);
-    alert("Gagal memproses ekspor PDF.");
-  }
-}
