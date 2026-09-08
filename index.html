@@ -74,7 +74,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPsNcE6dDn-9Ip8z3xiYODs6sQv7Mlv9K_U3NFFyCSce5MQuRyyModsvgjgoxzOKPS5A/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwc-Sgrdzn6l06IV_RPNtDF-pieRVZywNtFxwa29cCQpN9jSVTPMI9XIii61DgyOMSTYA/exec";
         const INITIAL_USERS = [
             { username: "muammar", password: "123", name: "Muammar Ghadafi", role: "admin", station: "STA. MNCGROUP PALANGKA RAYA" },
             { username: "murjani", password: "123", name: "Murjani", role: "operator", station: "STA. MNCGROUP PALANGKA RAYA" },
@@ -1087,3 +1087,59 @@
     </script>
 </body>
 </html>
+async function exportMonthlyPDFFromFirestore(selectedMonthYear) {
+  try {
+    console.log("Mengambil data dari Firestore...");
+    
+    // 1. Ambil data koleksi 'reports' dari Firestore
+    const querySnapshot = await db.collection("reports").get();
+    let reportsArray = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      // Filter berdasarkan bulan jika diperlukan (misal: "2026-08")
+      if (doc.id.startsWith(selectedMonthYear)) {
+        reportsArray.push({
+          date: doc.id,
+          operator: data.operatorsBySlot ? Object.values(data.operatorsBySlot)[0] : "Operator",
+          outputTx: data.meteringData?.outputTx || "0",
+          voltase: data.meteringData?.voltaseLine || "0",
+          suhu: data.meteringData?.suhuPanel || "0",
+          status: data.status || "Submitted",
+          note: data.meteringData?.note || "-"
+        });
+      }
+    });
+
+    if (reportsArray.length === 0) {
+      alert("Tidak ada data laporan untuk periode tersebut!");
+      return;
+    }
+
+    console.log("Mengirim data ke Google Apps Script untuk digenerate menjadi PDF...");
+
+    // 2. Kirim data ke Google Apps Script Web App URL
+    const GOOGLE_SCRIPT_URL = "URL_WEB_APP_APPS_SCRIPT_ANDA_DISINI";
+    
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "generateMonthlyPDF",
+        month: selectedMonthYear,
+        reports: reportsArray
+      })
+    });
+
+    const result = await response.json();
+    if (result.status === "success") {
+      alert("Sukses! File PDF rekap bulanan telah diunggah ke Google Drive.");
+      window.open(result.fileUrl, "_blank"); // Buka file PDF di tab baru
+    } else {
+      alert("Gagal membuat PDF: " + result.message);
+    }
+
+  } catch (error) {
+    console.error("Terjadi kesalahan:", error);
+    alert("Gagal memproses ekspor PDF.");
+  }
+}
