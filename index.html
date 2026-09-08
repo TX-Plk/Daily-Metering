@@ -12,6 +12,30 @@
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
+    <!-- FIREBASE SDK MODULAR & CONFIG -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCyPLlqTnIrGX-lsx5cL8V5a75x4neP7zA",
+            authDomain: "metering-harian.firebaseapp.com",
+            projectId: "metering-harian",
+            storageBucket: "metering-harian.firebasestorage.app",
+            messagingSenderId: "150918403414",
+            appId: "1:150918403414:web:db08d70e3b3d8d0548b2f7",
+            measurementId: "G-3NE0WWS4N8"
+        };
+
+        // Inisialisasi Firebase & Firestore Global
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Menyimpan instance ke window agar bisa diakses oleh komponen React di bawah
+        window.firebaseDb = db;
+        window.FirebaseFirestoreHelpers = { doc, setDoc, getDoc, onSnapshot };
+    </script>
+    
     <!-- CSS FORMAT CETAK 1 HALAMAN LANDSCAPE -->
     <style>
         @media print {
@@ -156,45 +180,44 @@
                 localStorage.setItem("metering_users_db", JSON.stringify(usersDB));
             }, [usersDB]);
 
+            // Real-time listener menggunakan Firestore (onSnapshot)
             useEffect(() => {
-                if (user) {
-                    setMeteringData({});
-                    setOperatorsBySlot({});
-                    setStatus("Draft");
-                    setRejectReason("");
-                    loadFromLocal(date);
-                }
-            }, [date, user]);
+                if (!user || !window.firebaseDb) return;
 
-            // ==========================================
-            // FUNGSI PENYIMPANAN LOKAL & GOOGLE DRIVE
-            // ==========================================
-            const loadFromLocal = (targetDate) => {
-                setAutoSyncStatus("Memuat dari penyimpanan lokal...");
-                try {
-                    const savedData = localStorage.getItem(`metering_report_${targetDate}`);
-                    if (savedData) {
-                        const parsed = JSON.parse(savedData);
-                        setMeteringData(parsed.meteringData || {});
-                        setOperatorsBySlot(parsed.operatorsBySlot || {});
-                        setStatus(parsed.status || "Draft");
-                        setRejectReason(parsed.rejectReason || "");
-                        setAutoSyncStatus("Data lokal dimuat");
+                setAutoSyncStatus("Menghubungkan Realtime Cloud...");
+                const db = window.firebaseDb;
+                const { doc, onSnapshot } = window.FirebaseFirestoreHelpers;
+                
+                const docRef = doc(db, "reports", date);
+                const unsubscribe = onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const cloudData = docSnap.data();
+                        setMeteringData(cloudData.meteringData || {});
+                        setOperatorsBySlot(cloudData.operatorsBySlot || {});
+                        setStatus(cloudData.status || "Draft");
+                        setRejectReason(cloudData.rejectReason || "");
+                        setAutoSyncStatus("🟢 Sinkronisasi Realtime Aktif");
                     } else {
                         setMeteringData({});
                         setOperatorsBySlot({});
                         setStatus("Draft");
                         setRejectReason("");
-                        setAutoSyncStatus("Data baru (kosong)");
+                        setAutoSyncStatus("🟡 Data Kosong (Belum ada input)");
                     }
-                } catch (e) {
-                    setAutoSyncStatus("Gagal memuat data lokal");
-                }
-            };
+                }, (error) => {
+                    setAutoSyncStatus("🔴 Gagal Sinkronisasi Cloud");
+                });
 
-            const saveToLocal = (targetDate, currentStatus, currentData, currentOps, currentReject = "") => {
+                return () => unsubscribe();
+            }, [date, user]);
+
+            const saveToCloud = async (targetDate, currentStatus, currentData, currentOps, currentReject = "") => {
+                if (!window.firebaseDb) return;
                 try {
-                    setAutoSyncStatus("Menyimpan ke lokal...");
+                    setAutoSyncStatus("Menyimpan ke Cloud...");
+                    const db = window.firebaseDb;
+                    const { doc, setDoc } = window.FirebaseFirestoreHelpers;
+
                     const payload = {
                         date: targetDate,
                         status: currentStatus,
@@ -203,36 +226,27 @@
                         operatorsBySlot: currentOps,
                         updatedAt: new Date().toISOString()
                     };
-                    localStorage.setItem(`metering_report_${targetDate}`, JSON.stringify(payload));
-                    setAutoSyncStatus("Tersimpan secara lokal");
+
+                    await setDoc(doc(db, "reports", targetDate), payload);
+                    setAutoSyncStatus("🟢 Perubahan Tersimpan di Cloud");
                 } catch (e) {
-                    setAutoSyncStatus("Gagal menyimpan lokal");
+                    setAutoSyncStatus("🔴 Gagal Menyimpan ke Cloud");
                 }
             };
 
             const handleUploadPdfToDrive = async () => {
                 setDriveLoading(true);
                 try {
-                    const savedData = localStorage.getItem(`metering_report_${date}`);
-                    
-                    if (!savedData) {
-                        alert("Belum ada data tersimpan untuk tanggal ini di browser!");
-                        setDriveLoading(false);
-                        return;
-                    }
-
-                    const localReport = JSON.parse(savedData);
-
                     const res = await fetch(GOOGLE_SCRIPT_URL, {
                         method: "POST",
                         headers: { "Content-Type": "text/plain;charset=utf-8" },
                         body: JSON.stringify({ 
                             action: "upload_pdf", 
                             date: date, 
-                            status: localReport.status, 
+                            status: status, 
                             pdfFileName: `Laporan_Metering_${date}.pdf`,
-                            meteringData: localReport.meteringData, 
-                            operatorsBySlot: localReport.operatorsBySlot,
+                            meteringData: meteringData, 
+                            operatorsBySlot: operatorsBySlot,
                             parameters: PARAMETERS 
                         }),
                         redirect: "follow"
@@ -328,20 +342,19 @@
                 setMeteringData(updatedData);
                 setOperatorsBySlot(updatedOps);
 
-                // Simpan otomatis ke localStorage
-                saveToLocal(date, status, updatedData, updatedOps, rejectReason);
+                // Kirim otomatis ke Firebase Firestore
+                saveToCloud(date, status, updatedData, updatedOps, rejectReason);
             };
 
             const handleDateChange = (newDate) => {
                 setDate(newDate);
-                loadFromLocal(newDate);
             };
 
             const handleSubmitReport = () => {
                 if (!confirm("Apakah Anda yakin ingin menyubmit laporan ini? Laporan akan TERKUNCI setelah disubmit.")) return;
                 setStatus("Submitted");
-                saveToLocal(date, "Submitted", meteringData, operatorsBySlot, rejectReason);
-                alert("Laporan berhasil disubmit dan telah TERKUNCI secara lokal!");
+                saveToCloud(date, "Submitted", meteringData, operatorsBySlot, rejectReason);
+                alert("Laporan berhasil disubmit dan telah TERKUNCI di Cloud!");
             };
 
             const handleExportExcelToDrive = async () => {
@@ -609,7 +622,7 @@
                             </div>
                             <div className="flex items-center space-x-3 text-sm">
                                 <span className="text-[11px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700 font-medium">
-                                    🔄 {autoSyncStatus || "Siap"}
+                                    {autoSyncStatus}
                                 </span>
                                 <button 
                                     onClick={() => setViewMode(viewMode === "matrix" ? "mobile" : "matrix")} 
@@ -683,7 +696,6 @@
                                             onClick={handleExportMonthlyExcel} 
                                             disabled={driveLoading}
                                             className="bg-lime-600 hover:bg-lime-700 text-white px-3 py-2 rounded-lg text-sm font-semibold shadow-sm flex items-center gap-1 disabled:opacity-50"
-                                            title="Merekap seluruh file 30 hari bulan ini ke dalam Excel"
                                         >
                                             📊 {driveLoading ? "Proses..." : "Rekap Bulanan Excel"}
                                         </button>
@@ -692,7 +704,6 @@
                                             onClick={handleExportMonthlyPdf} 
                                             disabled={driveLoading}
                                             className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 rounded-lg text-sm font-semibold shadow-sm flex items-center gap-1 disabled:opacity-50"
-                                            title="Merekap seluruh file 30 hari bulan ini ke dalam 1 File PDF"
                                         >
                                             📄 {driveLoading ? "Proses..." : "Rekap Bulanan PDF"}
                                         </button>
@@ -702,13 +713,6 @@
                                             className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-sm font-semibold shadow-sm flex items-center gap-1"
                                         >
                                             📂 Riwayat File
-                                        </button>
-
-                                        <button 
-                                            onClick={() => loadFromLocal(date)} 
-                                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm font-semibold shadow-sm flex items-center gap-1"
-                                        >
-                                            🔄 Refresh Data
                                         </button>
 
                                         {(status === "Draft" || status === "Rejected") && (
@@ -725,14 +729,14 @@
                                 {(user.role === "admin" || user.role === "supervisor") && (
                                     <>
                                         {status !== "Approved" && (
-                                            <button onClick={() => { setStatus("Approved"); saveToLocal(date, "Approved", meteringData, operatorsBySlot, rejectReason); }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm">
+                                            <button onClick={() => { setStatus("Approved"); saveToCloud(date, "Approved", meteringData, operatorsBySlot, rejectReason); }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm">
                                                 Approve (Supervisor)
                                             </button>
                                         )}
                                         {status !== "Rejected" && (
                                             <button onClick={() => {
                                                 const reason = prompt("Masukkan alasan penolakan:");
-                                                if (reason) { setRejectReason(reason); setStatus("Rejected"); saveToLocal(date, "Rejected", meteringData, operatorsBySlot, reason); }
+                                                if (reason) { setRejectReason(reason); setStatus("Rejected"); saveToCloud(date, "Rejected", meteringData, operatorsBySlot, reason); }
                                             }} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm">
                                                 Reject (Supervisor)
                                             </button>
@@ -784,7 +788,7 @@
                         {(viewMode === "matrix" || window.matchMedia('print').matches) && (
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print-shadow-none">
                                 <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center no-print">
-                                    <h3 className="font-bold text-slate-800 text-sm">Tabel Matrix Daily Report Metering (All Channels)</h3>
+                                    <h3 className="font-bold text-slate-800 text-sm">Tabel Matrix Daily Report Metering (Realtime Cloud Sync)</h3>
                                     <span className="text-xs text-slate-500">
                                         💡 Gunakan tombol <code className="bg-slate-200 px-1 rounded font-bold">Tab</code> / <code className="bg-slate-200 px-1 rounded font-bold">↑ ↓ ← →</code> untuk navigasi antar sel.
                                     </span>
