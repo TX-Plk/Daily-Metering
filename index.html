@@ -180,7 +180,6 @@
                 localStorage.setItem("metering_users_db", JSON.stringify(usersDB));
             }, [usersDB]);
 
-            // Real-time listener menggunakan Firestore (onSnapshot)
             useEffect(() => {
                 if (!user || !window.firebaseDb) return;
 
@@ -231,37 +230,6 @@
                     setAutoSyncStatus("🟢 Perubahan Tersimpan di Cloud");
                 } catch (e) {
                     setAutoSyncStatus("🔴 Gagal Menyimpan ke Cloud");
-                }
-            };
-
-            const handleUploadPdfToDrive = async () => {
-                setDriveLoading(true);
-                try {
-                    const res = await fetch(GOOGLE_SCRIPT_URL, {
-                        method: "POST",
-                        headers: { "Content-Type": "text/plain;charset=utf-8" },
-                        body: JSON.stringify({ 
-                            action: "upload_pdf", 
-                            date: date, 
-                            status: status, 
-                            pdfFileName: `Laporan_Metering_${date}.pdf`,
-                            meteringData: meteringData, 
-                            operatorsBySlot: operatorsBySlot,
-                            parameters: PARAMETERS 
-                        }),
-                        redirect: "follow"
-                    });
-                    
-                    const result = await res.json();
-                    if (result.status === "success") {
-                        alert(result.message || "PDF berhasil diunggah ke Google Drive!");
-                    } else {
-                        alert("Gagal upload PDF: " + result.message);
-                    }
-                } catch (err) {
-                    alert("Gagal memproses pembuatan PDF ke Drive.");
-                } finally {
-                    setDriveLoading(false);
                 }
             };
 
@@ -356,64 +324,10 @@
                 alert("Laporan berhasil disubmit dan telah TERKUNCI di Cloud!");
             };
 
-            const handleExportExcelToDrive = async () => {
-                setDriveLoading(true);
-                try {
-                    const res = await fetch(GOOGLE_SCRIPT_URL, {
-                        method: "POST",
-                        headers: { "Content-Type": "text/plain;charset=utf-8" },
-                        body: JSON.stringify({ 
-                            action: "export_excel", 
-                            date, 
-                            status, 
-                            meteringData, 
-                            operatorsBySlot,
-                            parameters: PARAMETERS 
-                        }),
-                        redirect: "follow"
-                    });
-                    const result = await res.json();
-                    if (result.status === "success") {
-                        alert(result.message || "File Excel berhasil disimpan!");
-                    } else {
-                        alert("Gagal menyimpan Excel: " + result.message);
-                    }
-                } catch (err) {
-                    alert("Gagal terhubung ke Google Drive.");
-                } finally {
-                    setDriveLoading(false);
-                }
-            };
-
-            const handleExportMonthlyExcel = async () => {
-                const monthYear = date.substring(0, 7);
-                setDriveLoading(true);
-                try {
-                    const res = await fetch(GOOGLE_SCRIPT_URL, {
-                        method: "POST",
-                        headers: { "Content-Type": "text/plain;charset=utf-8" },
-                        body: JSON.stringify({ action: "export_monthly_excel", monthYear: monthYear, parameters: PARAMETERS }),
-                        redirect: "follow"
-                    });
-                    const result = await res.json();
-                    if (result.status === "success") {
-                        alert(result.message);
-                    } else {
-                        alert("Gagal rekap bulanan Excel: " + result.message);
-                    }
-                } catch (err) {
-                    alert("Gagal terhubung ke Google Drive.");
-                } finally {
-                    setDriveLoading(false);
-                }
-            };
-
-            // PERBAIKAN UTAMA: Disesuaikan dengan backend (action: "generateMonthlyPDF")
             const handleExportMonthlyPdf = async () => {
-                const monthYear = date.substring(0, 7); // Format "YYYY-MM"
+                const monthYear = date.substring(0, 7); 
                 setDriveLoading(true);
                 try {
-                    console.log("Mengambil data rekap bulanan dari Firestore untuk bulan:", monthYear);
                     const db = window.firebaseDb;
                     const { collection, getDocs } = window.FirebaseFirestoreHelpers;
                     
@@ -443,8 +357,6 @@
                         return;
                     }
 
-                    console.log("Mengirim rekap data ke Google Apps Script backend...", reportsArray);
-
                     const res = await fetch(GOOGLE_SCRIPT_URL, {
                         method: "POST",
                         headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -466,7 +378,6 @@
                         alert("Gagal rekap bulanan PDF: " + (result.message || "Kesalahan tidak dikenal"));
                     }
                 } catch (err) {
-                    console.error("Error:", err);
                     alert("Gagal terhubung ke server atau memproses rekap PDF bulanan.");
                 } finally {
                     setDriveLoading(false);
@@ -637,13 +548,6 @@
                                 <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg shadow transition">
                                     Masuk ke Sistem
                                 </button>
-
-                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-4 text-[11px] text-slate-600 space-y-1">
-                                    <p className="font-bold text-slate-800">Akun Pengguna Default (Password: 123):</p>
-                                    <p>• Admin & Spv: <code className="bg-slate-200 px-1 rounded">muammar</code> (Muammar Ghadafi)</p>
-                                    <p>• Operator 1: <code className="bg-slate-200 px-1 rounded">murjani</code> (Murjani)</p>
-                                    <p>• Operator 2: <code className="bg-slate-200 px-1 rounded">debak</code> (Debak)</p>
-                                </div>
                             </form>
                         </div>
                     </div>
@@ -717,30 +621,6 @@
                             <div className="flex flex-wrap gap-2 no-print">
                                 {user.role === "admin" && (
                                     <>
-                                        <button 
-                                            onClick={handleUploadPdfToDrive} 
-                                            disabled={driveLoading}
-                                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm font-semibold shadow-sm flex items-center gap-1 disabled:opacity-50"
-                                        >
-                                            📄 {driveLoading ? "Proses..." : "PDF Harian"}
-                                        </button>
-
-                                        <button 
-                                            onClick={handleExportExcelToDrive} 
-                                            disabled={driveLoading}
-                                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm font-semibold shadow-sm flex items-center gap-1 disabled:opacity-50"
-                                        >
-                                            📊 {driveLoading ? "Proses..." : "Excel Harian"}
-                                        </button>
-
-                                        <button 
-                                            onClick={handleExportMonthlyExcel} 
-                                            disabled={driveLoading}
-                                            className="bg-lime-600 hover:bg-lime-700 text-white px-3 py-2 rounded-lg text-sm font-semibold shadow-sm flex items-center gap-1 disabled:opacity-50"
-                                        >
-                                            📊 {driveLoading ? "Proses..." : "Rekap Bulanan Excel"}
-                                        </button>
-
                                         <button 
                                             onClick={handleExportMonthlyPdf} 
                                             disabled={driveLoading}
