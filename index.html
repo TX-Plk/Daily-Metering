@@ -1119,7 +1119,7 @@ async function exportMonthlyPDFFromFirestore(selectedMonthYear) {
     console.log("Mengirim data ke Google Apps Script untuk digenerate menjadi PDF...");
 
     // 2. Kirim data ke Google Apps Script Web App URL
-    const GOOGLE_SCRIPT_URL = "URL_WEB_APP_APPS_SCRIPT_ANDA_DISINI";
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwc-Sgrdzn6l06IV_RPNtDF-pieRVZywNtFxwa29cCQpN9jSVTPMI9XIii61DgyOMSTYA/exec";
     
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
