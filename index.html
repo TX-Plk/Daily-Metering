@@ -874,23 +874,23 @@
                         {/* ACCORDION VIEW / RESPONSIVE */}
                         {viewMode === "mobile" && (
                             <div className="space-y-4 no-print max-w-5xl mx-auto w-full">
-                                <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                                <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col gap-3 shadow-sm">
                                     <div>
                                         <div className="flex items-center gap-2">
-                                            <label className="text-xs font-bold text-slate-700 uppercase">Jam Input:</label>
+                                            <label className="text-xs font-bold text-slate-700 uppercase">Pilih Jam Input:</label>
                                         </div>
                                         <p className="text-[11px] text-blue-600 font-bold mt-0.5">
                                             Petugas Slot {selectedSlot}: {isSlotComplete(selectedSlot, meteringData) ? (operatorsBySlot[selectedSlot] || user.name) : "Belum lengkap (selesaikan semua parameter)"}
                                         </p>
                                     </div>
-                                    <div className="flex flex-wrap gap-1.5">
+                                    <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-1.5 w-full">
                                         {TIME_SLOTS.map(slot => {
                                             const isAutoActive = slot === autoCurrentSlot;
                                             return (
                                                 <button 
                                                     key={slot}
                                                     onClick={() => setSelectedSlot(slot)}
-                                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition relative ${
+                                                    className={`px-2 py-1.5 text-xs font-bold rounded-lg transition relative text-center truncate ${
                                                         selectedSlot === slot 
                                                             ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-300" 
                                                             : isAutoActive 
