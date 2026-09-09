@@ -159,7 +159,7 @@
             const [date, setDate] = useState(() => getLocalDateString());
             const [status, setStatus] = useState("Draft");
             const [rejectReason, setRejectReason] = useState("");
-            const [viewMode, setViewMode] = useState("matrix");
+            const [viewMode, setViewMode] = useState(() => window.innerWidth < 768 ? "mobile" : "matrix");
             const [selectedSlot, setSelectedSlot] = useState("08:00");
             const [driveLoading, setDriveLoading] = useState(false);
             const [autoSyncStatus, setAutoSyncStatus] = useState("");
@@ -806,9 +806,9 @@
                             </div>
                         )}
 
-                        {/* ACCORDION VIEW HP (Diperbarui dengan max-w-2xl agar rapi dan tidak kosong/melar di tengah) */}
+                        {/* ACCORDION VIEW / RESPONSIVE (Disesuaikan dengan max-w-4xl agar pas dan elegan di PC/Tablet) */}
                         {viewMode === "mobile" && (
-                            <div className="space-y-4 no-print max-w-2xl mx-auto w-full">
+                            <div className="space-y-4 no-print max-w-4xl mx-auto w-full">
                                 <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
                                     <div>
                                         <label className="text-xs font-bold text-slate-700 uppercase">Pilih Jam Input:</label>
