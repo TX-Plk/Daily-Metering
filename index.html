@@ -806,9 +806,9 @@
                             </div>
                         )}
 
-                        {/* ACCORDION VIEW / RESPONSIVE (Disesuaikan dengan max-w-4xl agar pas dan elegan di PC/Tablet) */}
+                        {/* ACCORDION VIEW / RESPONSIVE (PARAMETER DISUSUN MENYAMPING DALAM BENTUK GRID) */}
                         {viewMode === "mobile" && (
-                            <div className="space-y-4 no-print max-w-4xl mx-auto w-full">
+                            <div className="space-y-4 no-print max-w-5xl mx-auto w-full">
                                 <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
                                     <div>
                                         <label className="text-xs font-bold text-slate-700 uppercase">Pilih Jam Input:</label>
@@ -836,23 +836,23 @@
                                         <div className="bg-slate-800 text-white px-4 py-2.5 font-bold text-xs uppercase tracking-wider">
                                             {cat.category}
                                         </div>
-                                        <div className="p-4 divide-y divide-slate-100">
+                                        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                             {cat.items.map(param => {
                                                 const val = meteringData[param.id]?.[selectedSlot] || "";
                                                 const isWarn = param.warnMax && parseFloat(val) > param.warnMax;
                                                 return (
-                                                    <div key={param.id} className="py-3 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                                        <div className="flex-1 pr-2">
-                                                            <p className="text-xs font-semibold text-slate-800">{param.name}</p>
+                                                    <div key={param.id} className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex flex-col justify-between shadow-xs">
+                                                        <div>
+                                                            <p className="text-xs font-semibold text-slate-800 line-clamp-2" title={param.name}>{param.name}</p>
                                                             <span className="text-[10px] text-slate-400">Satuan: {param.unit}</span>
                                                         </div>
-                                                        <div className="w-full sm:w-56">
+                                                        <div className="mt-2">
                                                             {param.type === "enum" ? (
                                                                 <select 
                                                                     value={val} 
                                                                     disabled={isFormLocked}
                                                                     onChange={e => handleInputChange(param.id, selectedSlot, e.target.value)}
-                                                                    className={`w-full p-2 text-xs border rounded-lg bg-slate-50 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none ${isFormLocked ? 'cursor-not-allowed opacity-75' : ''}`}
+                                                                    className={`w-full p-1.5 text-xs border rounded-lg bg-white font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none ${isFormLocked ? 'cursor-not-allowed opacity-75' : ''}`}
                                                                 >
                                                                     <option value="">- Pilih -</option>
                                                                     {param.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -865,7 +865,7 @@
                                                                     disabled={isFormLocked}
                                                                     placeholder="0"
                                                                     onChange={e => handleInputChange(param.id, selectedSlot, sanitizeNumberInput(e.target.value))}
-                                                                    className={`w-full p-2 text-xs border rounded-lg text-center bg-slate-50 focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                                                                    className={`w-full p-1.5 text-xs border rounded-lg text-center bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none ${
                                                                         isWarn ? "bg-amber-100 font-bold text-amber-900 border-amber-300" : ""
                                                                     } ${isFormLocked ? 'cursor-not-allowed opacity-75' : ''}`}
                                                                 />
