@@ -741,7 +741,7 @@
                                             🔵 Slot Jam Aktif (/auto): {autoCurrentSlot}
                                         </span>
                                         <span className="text-xs text-slate-500 hidden lg:inline">
-                                            💡 Gunakan <code className="bg-slate-200 px-1 rounded font-bold">Tab</code> / <code className="bg-slate-200 px-1 rounded font-bold">↑ ↓ ← →</code>
+                                            💡 Klik header jam untuk memilih slot | <code className="bg-slate-200 px-1 rounded font-bold">Tab</code> / <code className="bg-slate-200 px-1 rounded font-bold">↑ ↓ ← →</code>
                                         </span>
                                     </div>
                                 </div>
@@ -754,17 +754,23 @@
                                                 <th className="p-2 font-bold text-center w-12 border-r">Satuan</th>
                                                 {TIME_SLOTS.map(slot => {
                                                     const isAutoActive = slot === autoCurrentSlot;
+                                                    const isSelected = slot === selectedSlot;
                                                     return (
                                                         <th 
                                                             key={slot} 
-                                                            className={`p-1.5 font-bold text-center border-r transition-colors ${
-                                                                isAutoActive 
+                                                            onClick={() => setSelectedSlot(slot)}
+                                                            className={`p-1.5 font-bold text-center border-r transition-colors cursor-pointer select-none ${
+                                                                isSelected 
+                                                                    ? "bg-blue-700 text-white ring-2 ring-blue-300 shadow-md" 
+                                                                    : isAutoActive 
                                                                     ? "bg-blue-600 text-white shadow-inner ring-1 ring-blue-700" 
-                                                                    : "text-slate-700"
+                                                                    : "text-slate-700 hover:bg-slate-200"
                                                             }`}
-                                                            title={isAutoActive ? "Slot Waktu Aktif Saat Ini (Auto)" : ""}
+                                                            title="Klik untuk memilih slot jam ini"
                                                         >
-                                                            {slot} {isAutoActive && <span className="block text-[9px] font-normal tracking-tight opacity-90">ACTIVE</span>}
+                                                            {slot} 
+                                                            {isAutoActive && <span className="block text-[9px] font-normal tracking-tight opacity-90">AUTO</span>}
+                                                            {isSelected && !isAutoActive && <span className="block text-[9px] font-normal tracking-tight opacity-90">SELECTED</span>}
                                                         </th>
                                                     );
                                                 })}
@@ -790,11 +796,14 @@
                                                                         const val = meteringData[param.id]?.[slot] || "";
                                                                         const isWarn = param.warnMax && parseFloat(val) > param.warnMax;
                                                                         const isAutoActive = slot === autoCurrentSlot;
+                                                                        const isSelected = slot === selectedSlot;
                                                                         const calculatedTabIndex = getTabIndex(slotIndex, currentParamIndex);
                                                                         
                                                                         let cellBgClass = "";
                                                                         if (isWarn) {
                                                                             cellBgClass = "bg-amber-100";
+                                                                        } else if (isSelected) {
+                                                                            cellBgClass = "bg-blue-100/60 ring-1 ring-blue-200";
                                                                         } else if (isAutoActive) {
                                                                             cellBgClass = "bg-blue-50/70";
                                                                         }
@@ -848,8 +857,9 @@
                                                     const isComplete = isSlotComplete(slot, meteringData);
                                                     const fullOpName = operatorsBySlot[slot] || user.name;
                                                     const isAutoActive = slot === autoCurrentSlot;
+                                                    const isSelected = slot === selectedSlot;
                                                     return (
-                                                        <td key={slot} className={`p-1 text-center border-r truncate max-w-[70px] ${isAutoActive ? 'bg-blue-100 font-extrabold text-blue-950' : ''}`} title={fullOpName}>
+                                                        <td key={slot} className={`p-1 text-center border-r truncate max-w-[70px] ${isSelected ? 'bg-blue-200 font-black text-blue-950' : isAutoActive ? 'bg-blue-100 font-extrabold text-blue-950' : ''}`} title={fullOpName}>
                                                             {isComplete ? fullOpName : "-"}
                                                         </td>
                                                     );
@@ -867,8 +877,8 @@
                                 <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
                                     <div>
                                         <div className="flex items-center gap-2">
-                                            <label className="text-xs font-bold text-slate-700 uppercase">Jam Input (Auto):</label>
-                                            <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold">✨ Sesuai Waktu Lokal</span>
+                                            <label className="text-xs font-bold text-slate-700 uppercase">Jam Input (Auto/Select):</label>
+                                            <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold">✨ Fleksibel Dipilih</span>
                                         </div>
                                         <p className="text-[11px] text-blue-600 font-bold mt-0.5">
                                             Petugas Slot {selectedSlot}: {isSlotComplete(selectedSlot, meteringData) ? (operatorsBySlot[selectedSlot] || user.name) : "Belum lengkap (selesaikan semua parameter)"}
