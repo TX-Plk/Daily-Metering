@@ -27,11 +27,9 @@
             measurementId: "G-3NE0WWS4N8"
         };
 
-        // Inisialisasi Firebase & Firestore Global
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Menyimpan instance ke window agar bisa diakses oleh komponen React di bawah
         window.firebaseDb = db;
         window.FirebaseFirestoreHelpers = { doc, setDoc, getDoc, onSnapshot, collection, getDocs };
     </script>
@@ -228,7 +226,7 @@
 
                     await setDoc(doc(db, "reports", targetDate), payload);
                     setAutoSyncStatus("🟢 Perubahan Tersimpan di Cloud");
-                } catch (e) {
+                } else (e) {
                     setAutoSyncStatus("🔴 Gagal Menyimpan ke Cloud");
                 }
             };
@@ -291,6 +289,13 @@
                 }, 1500);
             };
 
+            const isSlotComplete = (slot, currentData) => {
+                return ALL_PARAM_ITEMS.every(param => {
+                    const val = currentData[param.id]?.[slot];
+                    return val !== undefined && val !== null && val.toString().trim() !== "";
+                });
+            };
+
             const handleInputChange = (paramId, timeSlot, value) => {
                 if (isFormLocked) return;
                 
@@ -302,10 +307,12 @@
                     }
                 };
 
-                const updatedOps = {
-                    ...operatorsBySlot,
-                    [timeSlot]: user.name
-                };
+                const updatedOps = { ...operatorsBySlot };
+                if (isSlotComplete(timeSlot, updatedData)) {
+                    updatedOps[timeSlot] = user.name;
+                } else {
+                    delete updatedOps[timeSlot];
+                }
 
                 setMeteringData(updatedData);
                 setOperatorsBySlot(updatedOps);
@@ -429,7 +436,7 @@
             const getFilledSlotsCount = () => {
                 let filledSlots = 0;
                 TIME_SLOTS.forEach(slot => {
-                    if (isSlotHasData(slot)) filledSlots++;
+                    if (isSlotComplete(slot, meteringData)) filledSlots++;
                 });
                 return filledSlots;
             };
@@ -788,16 +795,16 @@
                                                 ));
                                             })()}
 
-                                            {/* BARIS BAWAH: NAMA PETUGAS INPUT PER SLOT WAKTU */}
+                                            {/* BARIS BAWAH: NAMA PETUGAS HANYA MUNCUL JIKA SEMUA PARAMETER DALAM SLOT SELESAI DIISI */}
                                             <tr className="bg-blue-50 text-blue-900 font-bold border-t-2 border-slate-300 text-[11px]">
                                                 <td className="p-2 sticky left-0 bg-blue-50 border-r">Penginput On Duty</td>
                                                 <td className="p-2 text-center border-r">-</td>
                                                 {TIME_SLOTS.map(slot => {
-                                                    const hasData = isSlotHasData(slot);
+                                                    const isComplete = isSlotComplete(slot, meteringData);
                                                     const fullOpName = operatorsBySlot[slot] || "-";
                                                     return (
                                                         <td key={slot} className="p-1 text-center border-r truncate max-w-[70px]" title={fullOpName}>
-                                                            {hasData ? fullOpName : "-"}
+                                                            {isComplete ? fullOpName : "-"}
                                                         </td>
                                                     );
                                                 })}
@@ -815,7 +822,7 @@
                                     <div>
                                         <label className="text-xs font-bold text-slate-700 uppercase">Pilih Jam Input:</label>
                                         <p className="text-[11px] text-blue-600 font-bold mt-0.5">
-                                            Petugas Slot {selectedSlot}: {isSlotHasData(selectedSlot) ? (operatorsBySlot[selectedSlot] || "-") : "Belum ada input"}
+                                            Petugas Slot {selectedSlot}: {isSlotComplete(selectedSlot, meteringData) ? (operatorsBySlot[selectedSlot] || "-") : "Belum lengkap (selesaikan semua parameter)"}
                                         </p>
                                     </div>
                                     <div className="flex flex-wrap gap-1.5">
