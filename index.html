@@ -81,6 +81,31 @@
 
         const TIME_SLOTS = ["00:00", "02:00", "04:00", "06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00", "22:00"];
 
+        // Fungsi helper untuk menentukan slot jam terdekat secara otomatis
+        const getAutoCurrentSlot = () => {
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            const totalMinutesNow = currentHour * 60 + currentMinute;
+
+            let closestSlot = TIME_SLOTS[0];
+            let minDiff = Infinity;
+
+            TIME_SLOTS.forEach(slot => {
+                const [h, m] = slot.split(':').map(Number);
+                const totalSlotMinutes = h * 60 + m;
+                const diff = Math.abs(totalMinutesNow - totalSlotMinutes);
+                
+                // Cari selisih waktu terdekat, atau slot yang sedang aktif (rentang 2 jam)
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestSlot = slot;
+                }
+            });
+
+            return closestSlot;
+        };
+
         const createTransmitterParams = (prefix) => [
             { id: `${prefix}_pwr`, name: "Output Power TX", unit: "W", type: "number", warnMax: null },
             { id: `${prefix}_ref`, name: "Reflected Power TX", unit: "W", type: "number", warnMax: 5 },
@@ -160,7 +185,10 @@
             const [status, setStatus] = useState("Draft");
             const [rejectReason, setRejectReason] = useState("");
             const [viewMode, setViewMode] = useState(() => window.innerWidth < 768 ? "mobile" : "matrix");
-            const [selectedSlot, setSelectedSlot] = useState("08:00");
+            
+            // Auto-select slot jam berdasarkan waktu saat ini
+            const [selectedSlot, setSelectedSlot] = useState(() => getAutoCurrentSlot());
+            
             const [driveLoading, setDriveLoading] = useState(false);
             const [autoSyncStatus, setAutoSyncStatus] = useState("");
             
@@ -806,12 +834,15 @@
                             </div>
                         )}
 
-                        {/* ACCORDION VIEW / RESPONSIVE (PARAMETER DISUSUN MENYAMPING DALAM BENTUK GRID) */}
+                        {/* ACCORDION VIEW / RESPONSIVE (PARAMETER DISUSUN MENYAMPING DALAM BENTUK GRID & AUTO JAM) */}
                         {viewMode === "mobile" && (
                             <div className="space-y-4 no-print max-w-5xl mx-auto w-full">
                                 <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
                                     <div>
-                                        <label className="text-xs font-bold text-slate-700 uppercase">Pilih Jam Input:</label>
+                                        <div className="flex items-center gap-2">
+                                            <label className="text-xs font-bold text-slate-700 uppercase">Jam Input (Auto):</label>
+                                            <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold">✨ Sesuai Waktu Lokal</span>
+                                        </div>
                                         <p className="text-[11px] text-blue-600 font-bold mt-0.5">
                                             Petugas Slot {selectedSlot}: {isSlotComplete(selectedSlot, meteringData) ? (operatorsBySlot[selectedSlot] || user.name) : "Belum lengkap (selesaikan semua parameter)"}
                                         </p>
@@ -822,7 +853,7 @@
                                                 key={slot}
                                                 onClick={() => setSelectedSlot(slot)}
                                                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-                                                    selectedSlot === slot ? "bg-blue-600 text-white shadow-sm" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                                    selectedSlot === slot ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-300" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                                                 }`}
                                             >
                                                 {slot}
