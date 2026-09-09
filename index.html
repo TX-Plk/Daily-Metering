@@ -96,7 +96,6 @@
                 const totalSlotMinutes = h * 60 + m;
                 const diff = Math.abs(totalMinutesNow - totalSlotMinutes);
                 
-                // Cari selisih waktu terdekat, atau slot yang sedang aktif (rentang 2 jam)
                 if (diff < minDiff) {
                     minDiff = diff;
                     closestSlot = slot;
@@ -187,7 +186,8 @@
             const [viewMode, setViewMode] = useState(() => window.innerWidth < 768 ? "mobile" : "matrix");
             
             // Auto-select slot jam berdasarkan waktu saat ini
-            const [selectedSlot, setSelectedSlot] = useState(() => getAutoCurrentSlot());
+            const autoCurrentSlot = getAutoCurrentSlot();
+            const [selectedSlot, setSelectedSlot] = useState(() => autoCurrentSlot);
             
             const [driveLoading, setDriveLoading] = useState(false);
             const [autoSyncStatus, setAutoSyncStatus] = useState("");
@@ -734,11 +734,16 @@
                         {/* TABEL MATRIX INPUT */}
                         {(viewMode === "matrix" || window.matchMedia('print').matches) && (
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print-shadow-none">
-                                <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center no-print">
+                                <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 no-print">
                                     <h3 className="font-bold text-slate-800 text-sm">Tabel Matrix Daily Report Metering (Realtime Cloud Sync)</h3>
-                                    <span className="text-xs text-slate-500">
-                                        💡 Gunakan tombol <code className="bg-slate-200 px-1 rounded font-bold">Tab</code> / <code className="bg-slate-200 px-1 rounded font-bold">↑ ↓ ← →</code> untuk navigasi antar sel.
-                                    </span>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs bg-blue-600 text-white px-2.5 py-1 rounded-md font-semibold flex items-center gap-1 shadow-xs">
+                                            🔵 Slot Jam Aktif (/auto): {autoCurrentSlot}
+                                        </span>
+                                        <span className="text-xs text-slate-500 hidden lg:inline">
+                                            💡 Gunakan <code className="bg-slate-200 px-1 rounded font-bold">Tab</code> / <code className="bg-slate-200 px-1 rounded font-bold">↑ ↓ ← →</code>
+                                        </span>
+                                    </div>
                                 </div>
 
                                 <div className="overflow-x-auto">
@@ -747,9 +752,22 @@
                                             <tr className="bg-slate-100 text-slate-700 uppercase border-b border-slate-200">
                                                 <th className="p-2 font-bold min-w-[180px] sticky left-0 bg-slate-100 z-10 border-r">Parameter</th>
                                                 <th className="p-2 font-bold text-center w-12 border-r">Satuan</th>
-                                                {TIME_SLOTS.map(slot => (
-                                                    <th key={slot} className="p-1.5 font-bold text-center border-r">{slot}</th>
-                                                ))}
+                                                {TIME_SLOTS.map(slot => {
+                                                    const isAutoActive = slot === autoCurrentSlot;
+                                                    return (
+                                                        <th 
+                                                            key={slot} 
+                                                            className={`p-1.5 font-bold text-center border-r transition-colors ${
+                                                                isAutoActive 
+                                                                    ? "bg-blue-600 text-white shadow-inner ring-1 ring-blue-700" 
+                                                                    : "text-slate-700"
+                                                            }`}
+                                                            title={isAutoActive ? "Slot Waktu Aktif Saat Ini (Auto)" : ""}
+                                                        >
+                                                            {slot} {isAutoActive && <span className="block text-[9px] font-normal tracking-tight opacity-90">ACTIVE</span>}
+                                                        </th>
+                                                    );
+                                                })}
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-200">
@@ -771,11 +789,19 @@
                                                                     {TIME_SLOTS.map((slot, slotIndex) => {
                                                                         const val = meteringData[param.id]?.[slot] || "";
                                                                         const isWarn = param.warnMax && parseFloat(val) > param.warnMax;
+                                                                        const isAutoActive = slot === autoCurrentSlot;
                                                                         const calculatedTabIndex = getTabIndex(slotIndex, currentParamIndex);
                                                                         
+                                                                        let cellBgClass = "";
+                                                                        if (isWarn) {
+                                                                            cellBgClass = "bg-amber-100";
+                                                                        } else if (isAutoActive) {
+                                                                            cellBgClass = "bg-blue-50/70";
+                                                                        }
+
                                                                         if (param.type === "enum") {
                                                                             return (
-                                                                                <td key={slot} className="p-0.5 border-r text-center">
+                                                                                <td key={slot} className={`p-0.5 border-r text-center ${cellBgClass}`}>
                                                                                     <select 
                                                                                         tabIndex={calculatedTabIndex}
                                                                                         value={val} 
@@ -792,7 +818,7 @@
                                                                         }
 
                                                                         return (
-                                                                            <td key={slot} className={`p-0.5 border-r text-center ${isWarn ? "bg-amber-100" : ""}`}>
+                                                                            <td key={slot} className={`p-0.5 border-r text-center ${cellBgClass}`}>
                                                                                 <input 
                                                                                     tabIndex={calculatedTabIndex}
                                                                                     type="text"
@@ -821,8 +847,9 @@
                                                 {TIME_SLOTS.map(slot => {
                                                     const isComplete = isSlotComplete(slot, meteringData);
                                                     const fullOpName = operatorsBySlot[slot] || user.name;
+                                                    const isAutoActive = slot === autoCurrentSlot;
                                                     return (
-                                                        <td key={slot} className="p-1 text-center border-r truncate max-w-[70px]" title={fullOpName}>
+                                                        <td key={slot} className={`p-1 text-center border-r truncate max-w-[70px] ${isAutoActive ? 'bg-blue-100 font-extrabold text-blue-950' : ''}`} title={fullOpName}>
                                                             {isComplete ? fullOpName : "-"}
                                                         </td>
                                                     );
@@ -834,7 +861,7 @@
                             </div>
                         )}
 
-                        {/* ACCORDION VIEW / RESPONSIVE (PARAMETER DISUSUN MENYAMPING DALAM BENTUK GRID & AUTO JAM) */}
+                        {/* ACCORDION VIEW / RESPONSIVE */}
                         {viewMode === "mobile" && (
                             <div className="space-y-4 no-print max-w-5xl mx-auto w-full">
                                 <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
@@ -848,17 +875,24 @@
                                         </p>
                                     </div>
                                     <div className="flex flex-wrap gap-1.5">
-                                        {TIME_SLOTS.map(slot => (
-                                            <button 
-                                                key={slot}
-                                                onClick={() => setSelectedSlot(slot)}
-                                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-                                                    selectedSlot === slot ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-300" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                                                }`}
-                                            >
-                                                {slot}
-                                            </button>
-                                        ))}
+                                        {TIME_SLOTS.map(slot => {
+                                            const isAutoActive = slot === autoCurrentSlot;
+                                            return (
+                                                <button 
+                                                    key={slot}
+                                                    onClick={() => setSelectedSlot(slot)}
+                                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition relative ${
+                                                        selectedSlot === slot 
+                                                            ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-300" 
+                                                            : isAutoActive 
+                                                            ? "bg-blue-100 text-blue-900 border border-blue-400 hover:bg-blue-200" 
+                                                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                                    }`}
+                                                >
+                                                    {slot} {isAutoActive && selectedSlot !== slot && <span className="absolute -top-1 -right-1 flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span></span>}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
