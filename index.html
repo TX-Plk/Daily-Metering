@@ -788,15 +788,16 @@
                                                 ));
                                             })()}
 
+                                            {/* BARIS BAWAH: NAMA PETUGAS INPUT PER SLOT WAKTU */}
                                             <tr className="bg-blue-50 text-blue-900 font-bold border-t-2 border-slate-300 text-[11px]">
                                                 <td className="p-2 sticky left-0 bg-blue-50 border-r">Penginput On Duty</td>
                                                 <td className="p-2 text-center border-r">-</td>
                                                 {TIME_SLOTS.map(slot => {
                                                     const hasData = isSlotHasData(slot);
-                                                    const opName = hasData ? (operatorsBySlot[slot] ? operatorsBySlot[slot].split(' ')[0] : "-") : "-";
+                                                    const fullOpName = operatorsBySlot[slot] || "-";
                                                     return (
-                                                        <td key={slot} className="p-1 text-center border-r truncate max-w-[70px]" title={hasData ? (operatorsBySlot[slot] || "-") : "Belum ada data"}>
-                                                            {opName}
+                                                        <td key={slot} className="p-1 text-center border-r truncate max-w-[70px]" title={fullOpName}>
+                                                            {hasData ? fullOpName : "-"}
                                                         </td>
                                                     );
                                                 })}
@@ -813,8 +814,8 @@
                                 <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                     <div>
                                         <label className="text-xs font-bold text-slate-700 uppercase">Pilih Jam Input:</label>
-                                        <p className="text-[10px] text-blue-600 font-bold mt-0.5">
-                                            Penginput Slot {selectedSlot}: {isSlotHasData(selectedSlot) ? (operatorsBySlot[selectedSlot] || "-") : "Belum ada input"}
+                                        <p className="text-[11px] text-blue-600 font-bold mt-0.5">
+                                            Petugas Slot {selectedSlot}: {isSlotHasData(selectedSlot) ? (operatorsBySlot[selectedSlot] || "-") : "Belum ada input"}
                                         </p>
                                     </div>
                                     <div className="flex flex-wrap gap-1.5">
