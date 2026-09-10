@@ -6,15 +6,20 @@
     <title>Dashboard Supervisor Admin - Metering</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        h2 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h2 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-top: 0; }
         .section { margin-bottom: 25px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 6px; background: #ffffff; }
         .section h3 { margin-top: 0; color: #334155; }
         label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: bold; }
-        input[type="text"], input[type="month"] { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
-        button { background-color: #0f172a; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        input[type="text"], input[type="month"] { width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #0f172a; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
         button:hover { background-color: #1e293b; }
-        #loading { display: none; font-style: italic; color: #64748b; margin-top: 5px; }
+        #loading { display: none; font-style: italic; color: #64748b; margin-top: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 8px; border: 1px solid #cbd5e1; font-size: 13px; text-align: left; }
+        th { background-color: #e2e8f0; color: #0f172a; }
+        .btn-danger { background-color: #b91c1c; padding: 6px 10px; font-size: 11px; }
+        .btn-danger:hover { background-color: #991b1b; }
     </style>
 </head>
 <body>
@@ -31,9 +36,9 @@
         <div id="loading">Sedang memproses PDF, mohon tunggu...</div>
     </div>
 
-    <!-- Bagian Reset Password User -->
+    <!-- Bagian Reset Password Input Manual -->
     <div class="section">
-        <h3>Reset Password User</h3>
+        <h3>Reset Password User (Manual)</h3>
         <label for="targetUsername">Username / Email User:</label>
         <input type="text" id="targetUsername" placeholder="Masukkan username user yang lupa password">
         
@@ -42,13 +47,43 @@
         
         <button onclick="executeResetPassword()">Reset Password Sekarang</button>
     </div>
+
+    <!-- Bagian Tabel Manajemen User & Reset Password Cepat -->
+    <div class="section">
+        <h3>Daftar User & Kontrol Akun</h3>
+        <table id="userTable">
+            <thead>
+                <tr>
+                    <th>Username / Email</th>
+                    <th>Role</th>
+                    <th style="text-align: center;">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>operator_pagi</td>
+                    <td>Operator</td>
+                    <td style="text-align: center;">
+                        <button class="btn-danger" onclick="quickReset('operator_pagi')">Reset Password</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>operator_malam</td>
+                    <td>Operator</td>
+                    <td style="text-align: center;">
+                        <button class="btn-danger" onclick="quickReset('operator_malam')">Reset Password</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <script>
     // URL Web App Google Apps Script Anda yang aktif
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw33ZMCGbGTfrtGby0kwlbSEO3n7P6USmYK_xy7mhser-Rsr15GnrfWbDbyGd7yNATb/exec";
 
-    // Fungsi Reset Password
+    // Fungsi Reset Password Manual via Input Form
     function executeResetPassword() {
         var username = document.getElementById('targetUsername').value.trim();
         var newPassword = document.getElementById('defaultNewPassword').value.trim() || '123456';
@@ -62,6 +97,23 @@
             return;
         }
         
+        sendResetRequest(username, newPassword, function() {
+            document.getElementById('targetUsername').value = '';
+        });
+    }
+
+    // Fungsi Reset Password Cepat via Tabel
+    function quickReset(username) {
+        var defaultPass = prompt("Masukkan password baru untuk user " + username + ":", "123456");
+        if (!defaultPass) return;
+
+        sendResetRequest(username, defaultPass, function() {
+            alert("Sukses! Password untuk " + username + " telah diubah menjadi: " + defaultPass);
+        });
+    }
+
+    // Helper Fungsi Fetch ke Google Apps Script Backend
+    function sendResetRequest(username, newPassword, onSuccess) {
         fetch(SCRIPT_URL, {
             method: "POST",
             body: JSON.stringify({
@@ -73,19 +125,19 @@
         .then(res => res.json())
         .then(response => {
             if (response.status === "success") {
-                alert("Berhasil! " + response.message + "\nPassword baru user adalah: " + newPassword);
-                document.getElementById('targetUsername').value = '';
+                alert("Berhasil! " + response.message);
+                if (typeof onSuccess === 'function') onSuccess();
             } else {
                 alert("Gagal: " + response.message);
             }
         })
         .catch(err => {
             console.error("Error:", err);
-            alert("Terjadi kesalahan koneksi ke server.");
+            alert("Terjadi kesalahan jaringan ke server.");
         });
     }
 
-    // Fungsi Pemicu Rekap Bulanan PDF
+    // Fungsi Pemicu Rekap Bulanan PDF (Rata-Rata Harian)
     function generateMonthlyReport() {
         var monthVal = document.getElementById('reportMonth').value;
         if (!monthVal) {
@@ -95,14 +147,11 @@
 
         document.getElementById('loading').style.display = 'block';
 
-        // Catatan: Di sini frontend Anda biasanya mengambil data rekap dari database/storage lokal 
-        // lalu mengirimkannya bersama 'month' ke Apps Script. 
-        // Contoh struktur payload minimal untuk dikirim ke Google Apps Script:
         var payload = {
             action: "generateMonthlyPDF",
             month: monthVal,
-            reportsMap: {}, // Masukkan objek data laporan harian Anda di sini
-            parameters: [], // Masukkan daftar kategori & parameter meteran Anda di sini
+            reportsMap: {}, 
+            parameters: [], 
             timeSlots: ["00:00", "02:00", "04:00", "06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00", "22:00"]
         };
 
