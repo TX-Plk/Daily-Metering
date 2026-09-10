@@ -3,87 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Supervisor Admin - Metering</title>
+    <title>Daily Report Metering - Full System</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        body { font-family: Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 15px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         h2 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-top: 0; }
+        .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #cbd5e1; padding-bottom: 10px; }
+        .nav-tabs button { background: #e2e8f0; color: #334155; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .nav-tabs button.active { background: #0f172a; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
         .section { margin-bottom: 25px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 6px; background: #ffffff; }
         .section h3 { margin-top: 0; color: #334155; }
         label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: bold; }
         input[type="text"], input[type="month"] { width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
-        button { background-color: #0f172a; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
-        button:hover { background-color: #1e293b; }
+        .btn-primary { background-color: #0f172a; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
+        .btn-primary:hover { background-color: #1e293b; }
         #loading { display: none; font-style: italic; color: #64748b; margin-top: 8px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 8px; border: 1px solid #cbd5e1; font-size: 13px; text-align: left; }
         th { background-color: #e2e8f0; color: #0f172a; }
-        .btn-danger { background-color: #b91c1c; padding: 6px 10px; font-size: 11px; }
+        .btn-danger { background-color: #b91c1c; color: white; padding: 6px 10px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; }
         .btn-danger:hover { background-color: #991b1b; }
+        .matrix-table input { width: 60px; text-align: center; padding: 4px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Dashboard Supervisor Admin</h2>
+    <h2>Daily Report Metering System</h2>
 
-    <!-- Bagian Rekap Bulanan Rata-Rata -->
-    <div class="section">
-        <h3>Generate PDF Rekap Bulanan (Rata-Rata Harian)</h3>
-        <label for="reportMonth">Pilih Bulan:</label>
-        <input type="month" id="reportMonth">
-        <button onclick="generateMonthlyReport()">Buat PDF Rekap Rata-Rata</button>
-        <div id="loading">Sedang memproses PDF, mohon tunggu...</div>
+    <!-- Menu Navigasi Utama -->
+    <div class="nav-tabs">
+        <button id="tabReportBtn" class="active" onclick="switchTab('report')">Form & Matrix Laporan</button>
+        <button id="tabAdminBtn" onclick="switchTab('admin')">Dashboard Supervisor Admin</button>
     </div>
 
-    <!-- Bagian Reset Password Input Manual -->
-    <div class="section">
-        <h3>Reset Password User (Manual)</h3>
-        <label for="targetUsername">Username / Email User:</label>
-        <input type="text" id="targetUsername" placeholder="Masukkan username user yang lupa password">
-        
-        <label for="defaultNewPassword">Password Baru:</label>
-        <input type="text" id="defaultNewPassword" value="123456" placeholder="Default password baru">
-        
-        <button onclick="executeResetPassword()">Reset Password Sekarang</button>
+    <!-- TAB 1: FORM & MATRIX LAPORAN -->
+    <div id="tabReport" class="tab-content active">
+        <div class="section">
+            <h3>Mode Input Laporan & Navigasi Matrix/Accordion</h3>
+            <p style="font-size: 13px; color: #64748b;">Gunakan tombol panah keyboard (Arrow Up/Down/Left/Right) untuk navigasi cepat antar sel input.</p>
+            
+            <div style="overflow-x: auto;">
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Satuan</th>
+                            <th>00:00</th>
+                            <th>02:00</th>
+                            <th>04:00</th>
+                            <th>06:00</th>
+                            <th>08:00</th>
+                            <th>10:00</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Tegangan R-S</td>
+                            <td>V</td>
+                            <td><input type="text" class="meter-input" value="220"></td>
+                            <td><input type="text" class="meter-input" value="221"></td>
+                            <td><input type="text" class="meter-input" value="219"></td>
+                            <td><input type="text" class="meter-input" value="220"></td>
+                            <td><input type="text" class="meter-input" value="222"></td>
+                            <td><input type="text" class="meter-input" value="220"></td>
+                        </tr>
+                        <tr>
+                            <td>Arus Load</td>
+                            <td>A</td>
+                            <td><input type="text" class="meter-input" value="45"></td>
+                            <td><input type="text" class="meter-input" value="46"></td>
+                            <td><input type="text" class="meter-input" value="44"></td>
+                            <td><input type="text" class="meter-input" value="45"></td>
+                            <td><input type="text" class="meter-input" value="48"></td>
+                            <td><input type="text" class="meter-input" value="47"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
-    <!-- Bagian Tabel Manajemen User & Reset Password Cepat -->
-    <div class="section">
-        <h3>Daftar User & Kontrol Akun</h3>
-        <table id="userTable">
-            <thead>
-                <tr>
-                    <th>Username / Email</th>
-                    <th>Role</th>
-                    <th style="text-align: center;">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>operator_pagi</td>
-                    <td>Operator</td>
-                    <td style="text-align: center;">
-                        <button class="btn-danger" onclick="quickReset('operator_pagi')">Reset Password</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>operator_malam</td>
-                    <td>Operator</td>
-                    <td style="text-align: center;">
-                        <button class="btn-danger" onclick="quickReset('operator_malam')">Reset Password</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- TAB 2: DASHBOARD SUPERVISOR ADMIN -->
+    <div id="tabAdmin" class="tab-content">
+        <!-- Rekap Bulanan Rata-Rata -->
+        <div class="section">
+            <h3>Generate PDF Rekap Bulanan (Rata-Rata Harian)</h3>
+            <label for="reportMonth">Pilih Bulan:</label>
+            <input type="month" id="reportMonth">
+            <button class="btn-primary" onclick="generateMonthlyReport()">Buat PDF Rekap Rata-Rata</button>
+            <div id="loading">Sedang memproses PDF, mohon tunggu...</div>
+        </div>
+
+        <!-- Reset Password Manual -->
+        <div class="section">
+            <h3>Reset Password User (Manual)</h3>
+            <label for="targetUsername">Username / Email User:</label>
+            <input type="text" id="targetUsername" placeholder="Masukkan username user yang lupa password">
+            
+            <label for="defaultNewPassword">Password Baru:</label>
+            <input type="text" id="defaultNewPassword" value="123456" placeholder="Default password baru">
+            
+            <button class="btn-primary" onclick="executeResetPassword()">Reset Password Sekarang</button>
+        </div>
+
+        <!-- Tabel Kontrol Akun User -->
+        <div class="section">
+            <h3>Daftar User & Kontrol Akun</h3>
+            <table id="userTable">
+                <thead>
+                    <tr>
+                        <th>Username / Email</th>
+                        <th>Role</th>
+                        <th style="text-align: center;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>operator_pagi</td>
+                        <td>Operator</td>
+                        <td style="text-align: center;">
+                            <button class="btn-danger" onclick="quickReset('operator_pagi')">Reset Password</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>operator_malam</td>
+                        <td>Operator</td>
+                        <td style="text-align: center;">
+                            <button class="btn-danger" onclick="quickReset('operator_malam')">Reset Password</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
-    // URL Web App Google Apps Script Anda yang aktif
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw33ZMCGbGTfrtGby0kwlbSEO3n7P6USmYK_xy7mhser-Rsr15GnrfWbDbyGd7yNATb/exec";
 
-    // Fungsi Reset Password Manual via Input Form
+    // Navigasi Tab
+    function switchTab(tabName) {
+        document.getElementById('tabReport').classList.remove('active');
+        document.getElementById('tabAdmin').classList.remove('active');
+        document.getElementById('tabReportBtn').classList.remove('active');
+        document.getElementById('tabAdminBtn').classList.remove('active');
+
+        if (tabName === 'report') {
+            document.getElementById('tabReport').classList.add('active');
+            document.getElementById('tabReportBtn').classList.add('active');
+        } else {
+            document.getElementById('tabAdmin').classList.add('active');
+            document.getElementById('tabAdminBtn').classList.add('active');
+        }
+    }
+
+    // Navigasi Keyboard Arrow untuk Input Matrix
+    const inputs = document.querySelectorAll('.meter-input');
+    inputs.forEach((input, index) => {
+        input.addEventListener('keydown', (e) => {
+            let targetIndex = index;
+            const rowLength = 6; // Jumlah kolom input per baris
+            if (e.key === 'ArrowRight') targetIndex++;
+            if (e.key === 'ArrowLeft') targetIndex--;
+            if (e.key === 'ArrowDown') targetIndex += rowLength;
+            if (e.key === 'ArrowUp') targetIndex -= rowLength;
+
+            if (targetIndex >= 0 && targetIndex < inputs.length) {
+                inputs[targetIndex].focus();
+                inputs[targetIndex].select();
+                e.preventDefault();
+            }
+        });
+    });
+
+    // Reset Password Manual
     function executeResetPassword() {
         var username = document.getElementById('targetUsername').value.trim();
         var newPassword = document.getElementById('defaultNewPassword').value.trim() || '123456';
@@ -93,16 +189,14 @@
             return;
         }
         
-        if (!confirm("Yakin ingin mereset password untuk user '" + username + "'?")) {
-            return;
-        }
+        if (!confirm("Yakin ingin mereset password untuk user '" + username + "'?")) return;
         
         sendResetRequest(username, newPassword, function() {
             document.getElementById('targetUsername').value = '';
         });
     }
 
-    // Fungsi Reset Password Cepat via Tabel
+    // Reset Password Cepat via Tabel
     function quickReset(username) {
         var defaultPass = prompt("Masukkan password baru untuk user " + username + ":", "123456");
         if (!defaultPass) return;
@@ -112,7 +206,7 @@
         });
     }
 
-    // Helper Fungsi Fetch ke Google Apps Script Backend
+    // Helper Fetch Reset
     function sendResetRequest(username, newPassword, onSuccess) {
         fetch(SCRIPT_URL, {
             method: "POST",
@@ -137,7 +231,7 @@
         });
     }
 
-    // Fungsi Pemicu Rekap Bulanan PDF (Rata-Rata Harian)
+    // Generate PDF Rekap Bulanan
     function generateMonthlyReport() {
         var monthVal = document.getElementById('reportMonth').value;
         if (!monthVal) {
@@ -152,7 +246,7 @@
             month: monthVal,
             reportsMap: {}, 
             parameters: [], 
-            timeSlots: ["00:00", "02:00", "04:00", "06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00", "22:00"]
+            timeSlots: ["00:00", "02:00", "04:00", "06:00", "08:00", "10:00"]
         };
 
         fetch(SCRIPT_URL, {
