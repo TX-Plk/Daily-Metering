@@ -72,7 +72,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby6pgztHCrcgD-m5x1Acqonx2OawOVw6ybxV2wIyPFIhVuXj66oZn05ehiIsxurSQWVYQ/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw33ZMCGbGTfrtGby0kwlbSEO3n7P6USmYK_xy7mhser-Rsr15GnrfWbDbyGd7yNATb/exec";
         const INITIAL_USERS = [
             { username: "muammar", password: "123", name: "Muammar Ghadafi", role: "admin", station: "STA. MNCGROUP PALANGKA RAYA" },
             { username: "murjani", password: "123", name: "Murjani", role: "operator", station: "STA. MNCGROUP PALANGKA RAYA" },
@@ -81,7 +81,6 @@
 
         const TIME_SLOTS = ["00:00", "02:00", "04:00", "06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00", "22:00"];
 
-        // Fungsi helper untuk menentukan slot jam terdekat secara otomatis
         const getAutoCurrentSlot = () => {
             const now = new Date();
             const currentHour = now.getHours();
@@ -185,7 +184,6 @@
             const [rejectReason, setRejectReason] = useState("");
             const [viewMode, setViewMode] = useState(() => window.innerWidth < 768 ? "mobile" : "matrix");
             
-            // Auto-select slot jam berdasarkan waktu saat ini
             const autoCurrentSlot = getAutoCurrentSlot();
             const [selectedSlot, setSelectedSlot] = useState(() => autoCurrentSlot);
             
@@ -367,26 +365,16 @@
                     const { collection, getDocs } = window.FirebaseFirestoreHelpers;
                     
                     const querySnapshot = await getDocs(collection(db, "reports"));
-                    let reportsArray = [];
+                    let reportsMap = {};
 
                     querySnapshot.forEach((docSnap) => {
                         const docId = docSnap.id;
                         if (docId.startsWith(monthYear)) {
-                            const data = docSnap.data();
-                            const firstOp = data.operatorsBySlot ? Object.values(data.operatorsBySlot)[0] : "Operator";
-                            reportsArray.push({
-                                date: docId,
-                                operator: firstOp || "Operator",
-                                outputTx: data.meteringData?.rcti_pwr?.["08:00"] || data.meteringData?.outputTx || "0",
-                                voltase: data.meteringData?.voltase || "220",
-                                suhu: data.meteringData?.suhu || "35",
-                                status: data.status || "Submitted",
-                                note: data.rejectReason || "Normal"
-                            });
+                            reportsMap[docId] = docSnap.data();
                         }
                     });
 
-                    if (reportsArray.length === 0) {
+                    if (Object.keys(reportsMap).length === 0) {
                         alert("Tidak ada data laporan untuk periode bulan " + monthYear + "!");
                         setDriveLoading(false);
                         return;
@@ -398,14 +386,16 @@
                         body: JSON.stringify({ 
                             action: "generateMonthlyPDF", 
                             month: monthYear, 
-                            reports: reportsArray 
+                            reportsMap: reportsMap,
+                            parameters: PARAMETERS,
+                            timeSlots: TIME_SLOTS
                         }),
                         redirect: "follow"
                     });
 
                     const result = await res.json();
                     if (result.status === "success") {
-                        alert("Sukses! File PDF rekap bulanan berhasil dibuat di Google Drive.");
+                        alert("Sukses! File PDF rekap bulanan persis format cetak berhasil dibuat di Google Drive.");
                         if (result.fileUrl) {
                             window.open(result.fileUrl, "_blank");
                         }
