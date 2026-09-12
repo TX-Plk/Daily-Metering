@@ -754,7 +754,7 @@
                             </div>
                         </div>
 
-                        <!-- TABEL MATRIX INPUT -->
+                        {/* TABEL MATRIX INPUT */}
                         {(viewMode === "matrix" || window.matchMedia('print').matches) && (
                             <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden print-shadow-none">
                                 <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 no-print">
@@ -872,7 +872,7 @@
                                                 ));
                                             })()}
 
-                                            <!-- BARIS BAWAH: NAMA PETUGAS -->
+                                            {/* BARIS BAWAH: NAMA PETUGAS */}
                                             <tr className="bg-blue-50 dark:bg-slate-800 text-blue-900 dark:text-blue-200 font-bold border-t-2 border-slate-300 dark:border-slate-700 text-[11px]">
                                                 <td className="p-2 sticky left-0 bg-blue-50 dark:bg-slate-800 border-r dark:border-slate-700">Penginput On Duty</td>
                                                 <td className="p-2 text-center border-r dark:border-slate-700">-</td>
@@ -894,7 +894,7 @@
                             </div>
                         )}
 
-                        <!-- ACCORDION VIEW / RESPONSIVE -->
+                        {/* ACCORDION VIEW / RESPONSIVE */}
                         {viewMode === "mobile" && (
                             <div className="space-y-4 no-print max-w-5xl mx-auto w-full">
                                 <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col gap-3 shadow-sm">
@@ -1035,7 +1035,7 @@
 
                     </main>
 
-                    <!-- MODAL RIWAYAT -->
+                    {/* MODAL RIWAYAT */}
                     {showHistoryModal && (
                         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800">
@@ -1081,7 +1081,7 @@
                         </div>
                     )}
 
-                    <!-- MODAL UBAH PASSWORD -->
+                    {/* MODAL UBAH PASSWORD */}
                     {showChangePassModal && (
                         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-800">
