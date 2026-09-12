@@ -6,6 +6,11 @@
     <title>Daily Report Metering</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <!-- React & ReactDOM CDN -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -54,7 +59,7 @@
             main { padding: 0 !important; space-y: 2 border: none !important; }
             table { font-size: 7pt !important; border-collapse: collapse !important; width: 100% !important; }
             th, td { padding: 1px 2px !important; line-height: 1.1 !important; border: 1px solid #94a3b8 !important; }
-            input, select { border: none !important; background: transparent !important; padding: 0 !important; font-size: 7pt !important; text-align: center !important; }
+            input, select { border: none !important; background: transparent !important; padding: 0 !important; font-size: 7pt !important; text-align: center !important; color: black !important; }
             
             .sign-section {
                 margin-top: 15px !important;
@@ -65,7 +70,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased min-h-screen">
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased min-h-screen transition-colors duration-200">
 
     <div id="root"></div>
 
@@ -184,6 +189,12 @@
             const [rejectReason, setRejectReason] = useState("");
             const [viewMode, setViewMode] = useState(() => window.innerWidth < 768 ? "mobile" : "matrix");
             
+            // State Tema Gelap / Terang
+            const [darkMode, setDarkMode] = useState(() => {
+                const savedTheme = localStorage.getItem("metering_theme");
+                return savedTheme ? savedTheme === "dark" : true; // Default Dark Mode
+            });
+            
             const autoCurrentSlot = getAutoCurrentSlot();
             const [selectedSlot, setSelectedSlot] = useState(() => autoCurrentSlot);
             
@@ -194,6 +205,17 @@
             const [operatorsBySlot, setOperatorsBySlot] = useState({});
 
             const isFormLocked = (status === "Submitted" || status === "Approved") && user?.role !== "admin";
+
+            // Sinkronisasi class dark mode ke elemen HTML root
+            useEffect(() => {
+                if (darkMode) {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem("metering_theme", "dark");
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem("metering_theme", "light");
+                }
+            }, [darkMode]);
 
             useEffect(() => {
                 const savedSession = localStorage.getItem("metering_session");
@@ -510,8 +532,8 @@
 
             if (!user) {
                 return (
-                    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-md border border-slate-700">
+                    <div className="min-h-screen bg-slate-900 dark:bg-slate-950 flex items-center justify-center p-4">
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden w-full max-w-md border border-slate-200 dark:border-slate-800">
                             <div className="bg-blue-600 p-6 text-white text-center flex flex-col items-center">
                                 <LogoMNC className="h-12 mb-3" />
                                 <h1 className="text-xl font-bold">Daily Report Metering</h1>
@@ -520,37 +542,37 @@
 
                             <form onSubmit={handleLogin} className="p-6 space-y-4">
                                 {loginError && (
-                                    <div className="bg-red-50 border-l-4 border-red-500 p-3 text-red-700 text-xs rounded">
+                                    <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 p-3 text-red-700 dark:text-red-300 text-xs rounded">
                                         {loginError}
                                     </div>
                                 )}
 
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Username</label>
+                                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Username</label>
                                     <input 
                                         type="text" 
                                         required
                                         value={loginInput.username}
                                         onChange={e => setLoginInput({...loginInput, username: e.target.value})}
-                                        className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                        className="w-full p-2.5 border dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                         placeholder="Masukkan username"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Password</label>
+                                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Password</label>
                                     <input 
                                         type="password" 
                                         required
                                         value={loginInput.password}
                                         onChange={e => setLoginInput({...loginInput, password: e.target.value})}
-                                        className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                        className="w-full p-2.5 border dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                         placeholder="Masukkan password"
                                     />
                                 </div>
 
                                 <div className="flex items-center justify-between text-xs">
-                                    <label className="flex items-center text-slate-600 cursor-pointer">
+                                    <label className="flex items-center text-slate-600 dark:text-slate-400 cursor-pointer">
                                         <input 
                                             type="checkbox" 
                                             checked={loginInput.remember}
@@ -572,7 +594,7 @@
 
             return (
                 <div className="pb-12">
-                    <header className="bg-slate-900 text-white shadow-lg sticky top-0 z-50 no-print">
+                    <header className="bg-slate-900 dark:bg-slate-900 text-white shadow-lg sticky top-0 z-50 no-print border-b border-slate-800">
                         <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
                             <div className="flex items-center space-x-3">
                                 <LogoMNC className="h-9" />
@@ -581,10 +603,20 @@
                                     <p className="text-xs text-slate-400">{user.station}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center space-x-3 text-sm">
-                                <span className="text-[11px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700 font-medium">
+                            <div className="flex items-center space-x-2 sm:space-x-3 text-sm">
+                                <span className="text-[11px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700 font-medium hidden md:inline">
                                     {autoSyncStatus}
                                 </span>
+
+                                {/* Tombol Toggle Dark/Light Mode */}
+                                <button 
+                                    onClick={() => setDarkMode(!darkMode)} 
+                                    className="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 shadow-sm"
+                                    title={darkMode ? "Ubah ke Mode Terang" : "Ubah ke Mode Gelap"}
+                                >
+                                    {darkMode ? "☀️" : "🌙"}
+                                </button>
+
                                 <button 
                                     onClick={() => setViewMode(viewMode === "matrix" ? "mobile" : "matrix")} 
                                     className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
@@ -602,7 +634,7 @@
                                     className="bg-amber-600/20 text-amber-300 hover:bg-amber-600 hover:text-white border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition"
                                     title="Ubah Password"
                                 >
-                                    🔑 Ubah Pass
+                                    🔑 Pass
                                 </button>
                                 <button 
                                     onClick={handleLogout}
@@ -616,21 +648,21 @@
 
                     <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
                         
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print-shadow-none">
+                        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print-shadow-none">
                             <div className="space-y-1">
                                 <div className="flex items-center space-x-2">
-                                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Stasiun</span>
+                                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Stasiun</span>
                                     <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                                        status === "Approved" ? "bg-emerald-100 text-emerald-800" :
-                                        status === "Submitted" ? "bg-blue-100 text-blue-800" :
-                                        status === "Rejected" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"
+                                        status === "Approved" ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300" :
+                                        status === "Submitted" ? "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300" :
+                                        status === "Rejected" ? "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300" : "bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300"
                                     }`}>
                                         STATUS: {status.toUpperCase()} {isFormLocked ? "🔒 (TERKUNCI)" : "✏️ (BISA DIISI)"}
                                     </span>
                                 </div>
-                                <h2 className="text-xl font-bold text-slate-900">{user.station}</h2>
-                                <p className="text-xs text-slate-500">
-                                    Operator Saat Ini: <span className="font-semibold text-slate-700">{user.name}</span> | Tanggal: <input type="date" value={date} onChange={e => handleDateChange(e.target.value)} className="font-semibold text-slate-700 border-b no-print" /> <span className="hidden print:inline font-semibold">{date}</span>
+                                <h2 className="text-xl font-bold text-slate-900 dark:text-white">{user.station}</h2>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    Operator Saat Ini: <span className="font-semibold text-slate-700 dark:text-slate-200">{user.name}</span> | Tanggal: <input type="date" value={date} onChange={e => handleDateChange(e.target.value)} className="font-semibold text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 bg-transparent no-print" /> <span className="hidden print:inline font-semibold">{date}</span>
                                 </p>
                             </div>
 
@@ -667,7 +699,7 @@
                                     <>
                                         {status !== "Approved" && (
                                             <button onClick={() => { setStatus("Approved"); saveToCloud(date, "Approved", meteringData, operatorsBySlot, rejectReason); }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm">
-                                                Approve (Supervisor)
+                                                Approve
                                             </button>
                                         )}
                                         {status !== "Rejected" && (
@@ -675,63 +707,63 @@
                                                 const reason = prompt("Masukkan alasan penolakan:");
                                                 if (reason) { setRejectReason(reason); setStatus("Rejected"); saveToCloud(date, "Rejected", meteringData, operatorsBySlot, reason); }
                                             }} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm">
-                                                Reject (Supervisor)
+                                                Reject
                                             </button>
                                         )}
                                     </>
                                 )}
 
-                                <button onClick={() => window.print()} className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm">
-                                    🖨️ Cetak PDF (1 Halaman)
+                                <button onClick={() => window.print()} className="bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm">
+                                    🖨️ Cetak PDF
                                 </button>
                             </div>
                         </div>
 
                         {status === "Rejected" && (
-                            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl">
-                                <p className="text-xs font-bold text-red-800 uppercase">Catatan Penolakan Supervisor:</p>
-                                <p className="text-sm text-red-700 mt-1">{rejectReason || "Mohon periksa kembali input data yang tidak wajar."}</p>
+                            <div className="bg-red-50 dark:bg-red-950/40 border-l-4 border-red-500 p-4 rounded-r-xl">
+                                <p className="text-xs font-bold text-red-800 dark:text-red-300 uppercase">Catatan Penolakan Supervisor:</p>
+                                <p className="text-sm text-red-700 dark:text-red-400 mt-1">{rejectReason || "Mohon periksa kembali input data yang tidak wajar."}</p>
                             </div>
                         )}
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 no-print">
-                            <div className="bg-white p-4 rounded-xl border border-slate-200">
-                                <p className="text-xs font-semibold text-slate-500 uppercase">Progres Input</p>
-                                <p className="text-2xl font-black text-slate-900 mt-1">{getFilledSlotsCount()} <span className="text-xs font-normal text-slate-500">/ 12 Slot</span></p>
-                                <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
+                            <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Progres Input</p>
+                                <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{getFilledSlotsCount()} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">/ 12 Slot</span></p>
+                                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-2">
                                     <div className="bg-blue-600 h-1.5 rounded-full transition-all" style={{width: `${(getFilledSlotsCount()/12)*100}%`}}></div>
                                 </div>
                             </div>
-                            <div className="bg-white p-4 rounded-xl border border-slate-200">
-                                <p className="text-xs font-semibold text-slate-500 uppercase">Warning System</p>
-                                <p className={`text-2xl font-black mt-1 ${countWarnings() > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                                    {countWarnings()} <span className="text-xs font-normal text-slate-500">Peringatan</span>
+                            <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Warning System</p>
+                                <p className={`text-2xl font-black mt-1 ${countWarnings() > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                    {countWarnings()} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">Peringatan</span>
                                 </p>
                                 <p className="text-xs text-slate-400 mt-1">{countWarnings() > 0 ? "Nilai melebihi batas normal" : "Kondisi Aman"}</p>
                             </div>
-                            <div className="bg-white p-4 rounded-xl border border-slate-200">
-                                <p className="text-xs font-semibold text-slate-500 uppercase">Fasilitas</p>
-                                <p className="text-2xl font-black text-emerald-600 mt-1">OK</p>
+                            <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Fasilitas</p>
+                                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">OK</p>
                                 <p className="text-xs text-slate-400 mt-1">AC & Fiber Optic Normal</p>
                             </div>
-                            <div className="bg-white p-4 rounded-xl border border-slate-200">
-                                <p className="text-xs font-semibold text-slate-500 uppercase">Status Approval</p>
-                                <p className="text-sm font-bold text-slate-800 mt-2">{status}</p>
+                            <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Status Approval</p>
+                                <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mt-2">{status}</p>
                                 <p className="text-xs text-slate-400 mt-0.5">{isFormLocked ? "🔒 Terkunci" : "✏️ Bisa Diisi"}</p>
                             </div>
                         </div>
 
                         {/* TABEL MATRIX INPUT */}
                         {(viewMode === "matrix" || window.matchMedia('print').matches) && (
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print-shadow-none">
-                                <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 no-print">
-                                    <h3 className="font-bold text-slate-800 text-sm">Tabel Matrix Daily Report Metering (Realtime Cloud Sync)</h3>
+                            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden print-shadow-none">
+                                <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 no-print">
+                                    <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Tabel Matrix Daily Report Metering (Realtime Cloud Sync)</h3>
                                     <div className="flex items-center gap-3">
                                         <span className="text-xs bg-blue-600 text-white px-2.5 py-1 rounded-md font-semibold flex items-center gap-1 shadow-xs">
-                                            🔵 Slot Jam Aktif (/auto): {autoCurrentSlot}
+                                            🔵 Slot Jam Aktif: {autoCurrentSlot}
                                         </span>
-                                        <span className="text-xs text-slate-500 hidden lg:inline">
-                                            💡 Klik header jam untuk memilih slot | <code className="bg-slate-200 px-1 rounded font-bold">Tab</code> / <code className="bg-slate-200 px-1 rounded font-bold">↑ ↓ ← →</code>
+                                        <span className="text-xs text-slate-500 dark:text-slate-400 hidden lg:inline">
+                                            💡 Klik header jam untuk memilih slot | <code className="bg-slate-200 dark:bg-slate-800 px-1 rounded font-bold">Tab</code> / <code className="bg-slate-200 dark:bg-slate-800 px-1 rounded font-bold">↑ ↓ ← →</code>
                                         </span>
                                     </div>
                                 </div>
@@ -739,9 +771,9 @@
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-xs text-left border-collapse">
                                         <thead>
-                                            <tr className="bg-slate-100 text-slate-700 uppercase border-b border-slate-200">
-                                                <th className="p-2 font-bold min-w-[180px] sticky left-0 bg-slate-100 z-10 border-r">Parameter</th>
-                                                <th className="p-2 font-bold text-center w-12 border-r">Satuan</th>
+                                            <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase border-b border-slate-200 dark:border-slate-700">
+                                                <th className="p-2 font-bold min-w-[180px] sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 border-r dark:border-slate-700">Parameter</th>
+                                                <th className="p-2 font-bold text-center w-12 border-r dark:border-slate-700">Satuan</th>
                                                 {TIME_SLOTS.map(slot => {
                                                     const isAutoActive = slot === autoCurrentSlot;
                                                     const isSelected = slot === selectedSlot;
@@ -749,12 +781,12 @@
                                                         <th 
                                                             key={slot} 
                                                             onClick={() => setSelectedSlot(slot)}
-                                                            className={`p-1.5 font-bold text-center border-r transition-colors cursor-pointer select-none ${
+                                                            className={`p-1.5 font-bold text-center border-r dark:border-slate-700 transition-colors cursor-pointer select-none ${
                                                                 isSelected 
                                                                     ? "bg-blue-700 text-white ring-2 ring-blue-300 shadow-md" 
                                                                     : isAutoActive 
-                                                                    ? "bg-blue-600 text-white shadow-inner ring-1 ring-blue-700" 
-                                                                    : "text-slate-700 hover:bg-slate-200"
+                                                                    ? "bg-blue-600 text-white shadow-inner" 
+                                                                    : "text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                                                             }`}
                                                             title="Klik untuk memilih slot jam ini"
                                                         >
@@ -766,22 +798,22 @@
                                                 })}
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-slate-200">
+                                        <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                                             {(() => {
                                                 let globalParamIndex = 0;
                                                 return PARAMETERS.map((cat, idx) => (
                                                     <React.Fragment key={idx}>
-                                                        <tr className="bg-slate-200/80 font-bold text-slate-900 uppercase">
+                                                        <tr className="bg-slate-200/80 dark:bg-slate-800/80 font-bold text-slate-900 dark:text-slate-200 uppercase">
                                                             <td colSpan={14} className="p-1 px-2">{cat.category}</td>
                                                         </tr>
                                                         {cat.items.map(param => {
                                                             const currentParamIndex = globalParamIndex++;
                                                             return (
-                                                                <tr key={param.id} className="hover:bg-slate-50">
-                                                                    <td className="p-1.5 font-medium sticky left-0 bg-white border-r shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
+                                                                <tr key={param.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                                                    <td className="p-1.5 font-medium sticky left-0 bg-white dark:bg-slate-900 border-r dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
                                                                         {param.name}
                                                                     </td>
-                                                                    <td className="p-1.5 text-center text-slate-400 border-r">{param.unit}</td>
+                                                                    <td className="p-1.5 text-center text-slate-400 border-r dark:border-slate-800">{param.unit}</td>
                                                                     {TIME_SLOTS.map((slot, slotIndex) => {
                                                                         const val = meteringData[param.id]?.[slot] || "";
                                                                         const isWarn = param.warnMax && parseFloat(val) > param.warnMax;
@@ -791,33 +823,33 @@
                                                                         
                                                                         let cellBgClass = "";
                                                                         if (isWarn) {
-                                                                            cellBgClass = "bg-amber-100";
+                                                                            cellBgClass = "bg-amber-100 dark:bg-amber-950/50";
                                                                         } else if (isSelected) {
-                                                                            cellBgClass = "bg-blue-100/60 ring-1 ring-blue-200";
+                                                                            cellBgClass = "bg-blue-100/60 dark:bg-blue-950/40 ring-1 ring-blue-200 dark:ring-blue-900";
                                                                         } else if (isAutoActive) {
-                                                                            cellBgClass = "bg-blue-50/70";
+                                                                            cellBgClass = "bg-blue-50/70 dark:bg-blue-950/20";
                                                                         }
 
                                                                         if (param.type === "enum") {
                                                                             return (
-                                                                                <td key={slot} className={`p-0.5 border-r text-center ${cellBgClass}`}>
+                                                                                <td key={slot} className={`p-0.5 border-r dark:border-slate-800 text-center ${cellBgClass}`}>
                                                                                     <select 
                                                                                         tabIndex={calculatedTabIndex}
                                                                                         value={val} 
                                                                                         disabled={isFormLocked}
                                                                                         onKeyDown={e => handleMatrixKeyDown(e, slotIndex, currentParamIndex)}
                                                                                         onChange={e => handleInputChange(param.id, slot, e.target.value)}
-                                                                                        className={`w-full p-0.5 text-center bg-transparent focus:outline-none font-semibold ${isFormLocked ? 'cursor-not-allowed opacity-75' : ''}`}
+                                                                                        className={`w-full p-0.5 text-center bg-transparent dark:text-slate-200 focus:outline-none font-semibold ${isFormLocked ? 'cursor-not-allowed opacity-75' : ''}`}
                                                                                     >
-                                                                                        <option value="">-</option>
-                                                                                        {param.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                                                        <option value="" className="dark:bg-slate-900">-</option>
+                                                                                        {param.options.map(opt => <option key={opt} value={opt} className="dark:bg-slate-900">{opt}</option>)}
                                                                                     </select>
                                                                                 </td>
                                                                             );
                                                                         }
 
                                                                         return (
-                                                                            <td key={slot} className={`p-0.5 border-r text-center ${cellBgClass}`}>
+                                                                            <td key={slot} className={`p-0.5 border-r dark:border-slate-800 text-center ${cellBgClass}`}>
                                                                                 <input 
                                                                                     tabIndex={calculatedTabIndex}
                                                                                     type="text"
@@ -827,7 +859,7 @@
                                                                                     placeholder="-"
                                                                                     onKeyDown={e => handleMatrixKeyDown(e, slotIndex, currentParamIndex)}
                                                                                     onChange={e => handleInputChange(param.id, slot, sanitizeNumberInput(e.target.value))}
-                                                                                    className={`w-full p-0.5 text-center bg-transparent focus:outline-none ${isWarn ? "font-bold text-amber-900" : ""} ${isFormLocked ? 'cursor-not-allowed opacity-75' : ''}`}
+                                                                                    className={`w-full p-0.5 text-center bg-transparent dark:text-slate-200 focus:outline-none ${isWarn ? "font-bold text-amber-900 dark:text-amber-400" : ""} ${isFormLocked ? 'cursor-not-allowed opacity-75' : ''}`}
                                                                                 />
                                                                             </td>
                                                                         );
@@ -840,16 +872,16 @@
                                             })()}
 
                                             {/* BARIS BAWAH: NAMA PETUGAS */}
-                                            <tr className="bg-blue-50 text-blue-900 font-bold border-t-2 border-slate-300 text-[11px]">
-                                                <td className="p-2 sticky left-0 bg-blue-50 border-r">Penginput On Duty</td>
-                                                <td className="p-2 text-center border-r">-</td>
+                                            <tr className="bg-blue-50 dark:bg-slate-800 text-blue-900 dark:text-blue-200 font-bold border-t-2 border-slate-300 dark:border-slate-700 text-[11px]">
+                                                <td className="p-2 sticky left-0 bg-blue-50 dark:bg-slate-800 border-r dark:border-slate-700">Penginput On Duty</td>
+                                                <td className="p-2 text-center border-r dark:border-slate-700">-</td>
                                                 {TIME_SLOTS.map(slot => {
                                                     const isComplete = isSlotComplete(slot, meteringData);
                                                     const fullOpName = operatorsBySlot[slot] || user.name;
                                                     const isAutoActive = slot === autoCurrentSlot;
                                                     const isSelected = slot === selectedSlot;
                                                     return (
-                                                        <td key={slot} className={`p-1 text-center border-r truncate max-w-[70px] ${isSelected ? 'bg-blue-200 font-black text-blue-950' : isAutoActive ? 'bg-blue-100 font-extrabold text-blue-950' : ''}`} title={fullOpName}>
+                                                        <td key={slot} className={`p-1 text-center border-r dark:border-slate-700 truncate max-w-[70px] ${isSelected ? 'bg-blue-200 dark:bg-blue-900 font-black text-blue-950 dark:text-blue-100' : isAutoActive ? 'bg-blue-100 dark:bg-blue-950 font-extrabold text-blue-950 dark:text-blue-200' : ''}`} title={fullOpName}>
                                                             {isComplete ? fullOpName : "-"}
                                                         </td>
                                                     );
@@ -864,13 +896,13 @@
                         {/* ACCORDION VIEW / RESPONSIVE */}
                         {viewMode === "mobile" && (
                             <div className="space-y-4 no-print max-w-5xl mx-auto w-full">
-                                <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col gap-3 shadow-sm">
+                                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col gap-3 shadow-sm">
                                     <div>
                                         <div className="flex items-center gap-2">
-                                            <label className="text-xs font-bold text-slate-700 uppercase">Pilih Jam Input:</label>
+                                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">Pilih Jam Input:</label>
                                         </div>
-                                        <p className="text-[11px] text-blue-600 font-bold mt-0.5">
-                                            Petugas Slot {selectedSlot}: {isSlotComplete(selectedSlot, meteringData) ? (operatorsBySlot[selectedSlot] || user.name) : "Belum lengkap (selesaikan semua parameter)"}
+                                        <p className="text-[11px] text-blue-600 dark:text-blue-400 font-bold mt-0.5">
+                                            Petugas Slot {selectedSlot}: {isSlotComplete(selectedSlot, meteringData) ? (operatorsBySlot[selectedSlot] || user.name) : "Belum lengkap"}
                                         </p>
                                     </div>
                                     <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-1.5 w-full">
@@ -884,11 +916,11 @@
                                                         selectedSlot === slot 
                                                             ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-300" 
                                                             : isAutoActive 
-                                                            ? "bg-blue-100 text-blue-900 border border-blue-400 hover:bg-blue-200" 
-                                                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                                            ? "bg-blue-100 dark:bg-blue-950 text-blue-900 dark:text-blue-300 border border-blue-400" 
+                                                            : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                                                     }`}
                                                 >
-                                                    {slot} {isAutoActive && selectedSlot !== slot && <span className="absolute -top-1 -right-1 flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span></span>}
+                                                    {slot}
                                                 </button>
                                             );
                                         })}
@@ -896,8 +928,8 @@
                                 </div>
 
                                 {PARAMETERS.map((cat, idx) => (
-                                    <div key={idx} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                                        <div className="bg-slate-800 text-white px-4 py-2.5 font-bold text-xs uppercase tracking-wider">
+                                    <div key={idx} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                                        <div className="bg-slate-800 dark:bg-slate-950 text-white px-4 py-2.5 font-bold text-xs uppercase tracking-wider">
                                             {cat.category}
                                         </div>
                                         <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -948,9 +980,9 @@
                                                 };
 
                                                 return (
-                                                    <div key={param.id} className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex flex-col justify-between shadow-xs">
+                                                    <div key={param.id} className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col justify-between shadow-xs">
                                                         <div>
-                                                            <p className="text-xs font-semibold text-slate-800 line-clamp-2" title={param.name}>{param.name}</p>
+                                                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 line-clamp-2" title={param.name}>{param.name}</p>
                                                             <span className="text-[10px] text-slate-400">Satuan: {param.unit}</span>
                                                         </div>
                                                         <div className="mt-2">
@@ -961,7 +993,7 @@
                                                                     data-acc-param={paramIndex}
                                                                     onKeyDown={handleAccordionKeyDown}
                                                                     onChange={e => handleInputChange(param.id, selectedSlot, e.target.value)}
-                                                                    className={`w-full p-1.5 text-xs border rounded-lg bg-white font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none ${isFormLocked ? 'cursor-not-allowed opacity-75' : ''}`}
+                                                                    className={`w-full p-1.5 text-xs border dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none ${isFormLocked ? 'cursor-not-allowed opacity-75' : ''}`}
                                                                 >
                                                                     <option value="">- Pilih -</option>
                                                                     {param.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -976,8 +1008,8 @@
                                                                     data-acc-param={paramIndex}
                                                                     onKeyDown={handleAccordionKeyDown}
                                                                     onChange={e => handleInputChange(param.id, selectedSlot, sanitizeNumberInput(e.target.value))}
-                                                                    className={`w-full p-1.5 text-xs border rounded-lg text-center bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-                                                                        isWarn ? "bg-amber-100 font-bold text-amber-900 border-amber-300" : ""
+                                                                    className={`w-full p-1.5 text-xs border dark:border-slate-700 rounded-lg text-center bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                                                                        isWarn ? "bg-amber-100 dark:bg-amber-950 font-bold text-amber-900 dark:text-amber-300 border-amber-300" : ""
                                                                     } ${isFormLocked ? 'cursor-not-allowed opacity-75' : ''}`}
                                                                 />
                                                             )}
@@ -1005,7 +1037,7 @@
                     {/* MODAL RIWAYAT */}
                     {showHistoryModal && (
                         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200">
+                            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800">
                                 <div className="bg-purple-900 text-white p-4 flex justify-between items-center">
                                     <h3 className="font-bold text-sm flex items-center gap-2">📂 Riwayat File Tersimpan di Drive</h3>
                                     <button onClick={() => setShowHistoryModal(false)} className="text-slate-300 hover:text-white font-bold">✕</button>
@@ -1016,18 +1048,18 @@
                                     ) : pdfHistory.length === 0 ? (
                                         <div className="text-center py-8 text-slate-500 text-xs">Belum ada file rekap tersimpan di Drive.</div>
                                     ) : (
-                                        <div className="divide-y divide-slate-100">
+                                        <div className="divide-y divide-slate-100 dark:divide-slate-800">
                                             {pdfHistory.map((pdf, index) => (
-                                                <div key={index} className="py-2.5 flex items-center justify-between hover:bg-slate-50 px-2 rounded-lg">
+                                                <div key={index} className="py-2.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 px-2 rounded-lg">
                                                     <div className="truncate mr-3">
-                                                        <p className="text-xs font-bold text-slate-800 truncate">{pdf.name}</p>
+                                                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{pdf.name}</p>
                                                         <p className="text-[10px] text-slate-400">Dibuat pada: {pdf.dateCreated}</p>
                                                     </div>
                                                     <a 
                                                         href={pdf.url} 
                                                         target="_blank" 
                                                         rel="noopener noreferrer"
-                                                        className="bg-purple-100 hover:bg-purple-200 text-purple-800 text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1 shrink-0 transition"
+                                                        className="bg-purple-100 dark:bg-purple-950/60 hover:bg-purple-200 text-purple-800 dark:text-purple-300 text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1 shrink-0 transition"
                                                     >
                                                         🔗 Buka File
                                                     </a>
@@ -1036,10 +1068,10 @@
                                         </div>
                                     )}
                                 </div>
-                                <div className="bg-slate-50 p-3 text-right border-t border-slate-100">
+                                <div className="bg-slate-50 dark:bg-slate-950 p-3 text-right border-t border-slate-100 dark:border-slate-800">
                                     <button 
                                         onClick={() => setShowHistoryModal(false)}
-                                        className="px-4 py-1.5 text-xs font-semibold text-slate-600 bg-slate-200 rounded-lg hover:bg-slate-300"
+                                        className="px-4 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-200 dark:bg-slate-800 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-700"
                                     >
                                         Tutup
                                     </button>
@@ -1051,50 +1083,50 @@
                     {/* MODAL UBAH PASSWORD */}
                     {showChangePassModal && (
                         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-slate-200">
+                            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-800">
                                 <div className="bg-slate-900 text-white p-4 flex justify-between items-center">
                                     <h3 className="font-bold text-sm">🔑 Ubah Password Akun</h3>
                                     <button onClick={() => setShowChangePassModal(false)} className="text-slate-400 hover:text-white font-bold">✕</button>
                                 </div>
                                 <form onSubmit={handleChangePassword} className="p-5 space-y-3">
-                                    {passMsg.error && <div className="bg-red-50 text-red-600 text-xs p-2 rounded border border-red-200">{passMsg.error}</div>}
-                                    {passMsg.success && <div className="bg-emerald-50 text-emerald-600 text-xs p-2 rounded border border-emerald-200">{passMsg.success}</div>}
+                                    {passMsg.error && <div className="bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-300 text-xs p-2 rounded border border-red-200 dark:border-red-900">{passMsg.error}</div>}
+                                    {passMsg.success && <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300 text-xs p-2 rounded border border-emerald-200 dark:border-emerald-900">{passMsg.success}</div>}
 
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1">Password Lama</label>
+                                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Password Lama</label>
                                         <input 
                                             type="password" 
                                             required
                                             value={passForm.oldPass}
                                             onChange={e => setPassForm({...passForm, oldPass: e.target.value})}
-                                            className="w-full p-2 border rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                            className="w-full p-2 border dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1">Password Baru</label>
+                                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Password Baru</label>
                                         <input 
                                             type="password" 
                                             required
                                             value={passForm.newPass}
                                             onChange={e => setPassForm({...passForm, newPass: e.target.value})}
-                                            className="w-full p-2 border rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                            className="w-full p-2 border dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1">Konfirmasi Password Baru</label>
+                                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Konfirmasi Password Baru</label>
                                         <input 
                                             type="password" 
                                             required
                                             value={passForm.confirmPass}
                                             onChange={e => setPassForm({...passForm, confirmPass: e.target.value})}
-                                            className="w-full p-2 border rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                            className="w-full p-2 border dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                         />
                                     </div>
                                     <div className="pt-2 flex justify-end space-x-2">
                                         <button 
                                             type="button" 
                                             onClick={() => setShowChangePassModal(false)}
-                                            className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
+                                            className="px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
                                         >
                                             Batal
                                         </button>
