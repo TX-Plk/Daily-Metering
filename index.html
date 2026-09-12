@@ -154,13 +154,18 @@
             return `${year}-${month}-${day}`;
         };
 
-        const LogoMNC = () => (
-  <img 
-    src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAcYAAADGCAYAAABIFSCdAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAIdUAACHVAQSctJ0AAIN6SURBVHhe7V0HeBTV2g5Ez..." 
-    alt="MNC Transmission Logo" 
-    style={{ height: '40px', width: 'auto' }}
-  />
-);
+        const LogoMNC = ({ className = "h-8" }) => (
+            <img 
+                src="Picture ok.png" 
+                alt="MNC Transmission" 
+                className={`${className} object-contain bg-white rounded p-1 shadow-sm`}
+                onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "https://i.ibb.co/3yPZ5pW/Picture-ok.png";
+                }}
+            />
+        );
+
         function App() {
             const [usersDB, setUsersDB] = useState(() => {
                 const saved = localStorage.getItem("metering_users_db");
