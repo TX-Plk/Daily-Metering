@@ -109,11 +109,11 @@
             return closestSlot;
         };
 
-        const createTransmitterParams = (prefix) => [
+        const createTransmitterParams = (prefix, sqUnit = "dB", ssUnit = "dB") => [
             { id: `${prefix}_pwr`, name: "Output Power TX", unit: "W", type: "number", warnMax: null },
             { id: `${prefix}_ref`, name: "Reflected Power TX", unit: "W", type: "number", warnMax: 5 },
-            { id: `${prefix}_sq`, name: "Indovision/Kvision SQ", unit: "dB", type: "number", warnMax: null },
-            { id: `${prefix}_ss`, name: "Indovision/Kvision SS", unit: "dB", type: "number", warnMax: null },
+            { id: `${prefix}_sq`, name: "Indovision/Kvision SQ", unit: sqUnit, type: "number", warnMax: null },
+            { id: `${prefix}_ss`, name: "Indovision/Kvision SS", unit: ssUnit, type: "number", warnMax: null },
             { id: `${prefix}_cn`, name: "C/N", unit: "dB", type: "number", warnMax: null },
             { id: `${prefix}_rf`, name: "RF Level", unit: "dBm", type: "number", warnMax: null },
             { id: `${prefix}_ber`, name: "BER", unit: "Desimal", type: "ber_decimal", warnMax: null },
@@ -131,10 +131,10 @@
                     { id: "fo_status", name: "Status Fiber Optic", unit: "Status", type: "enum", options: ["OK", "NOT OK"] },
                 ]
             },
-            { category: "2. Transmitter RCTI", items: createTransmitterParams("rcti") },
-            { category: "3. Transmitter MNCTV", items: createTransmitterParams("mnc") },
-            { category: "4. Transmitter GTV", items: createTransmitterParams("gtv") },
-            { category: "5. Transmitter iNews", items: createTransmitterParams("inews") },
+            { category: "2. Transmitter RCTI", items: createTransmitterParams("rcti", "dB", "dBm") },
+            { category: "3. Transmitter MNCTV", items: createTransmitterParams("mnc", "%", "%") },
+            { category: "4. Transmitter GTV", items: createTransmitterParams("gtv", "%", "%") },
+            { category: "5. Transmitter iNews", items: createTransmitterParams("inews", "%", "%") },
             { 
                 category: "6. Backup System", 
                 items: [
