@@ -406,8 +406,8 @@
                         method: "POST",
                         headers: { "Content-Type": "text/plain;charset=utf-8" },
                         body: JSON.stringify({ 
-                            action: "export_monthly_pdf", // Disesuaikan dengan handler di Apps Script backend
-                            monthYear: monthYear, 
+                            action: "generateMonthlyPDF", 
+                            month: monthYear, 
                             reportsMap: reportsMap,
                             parameters: PARAMETERS,
                             timeSlots: TIME_SLOTS
@@ -417,7 +417,10 @@
 
                     const result = await res.json();
                     if (result.status === "success") {
-                        alert("Sukses! " + result.message);
+                        alert("Sukses! File PDF rekap bulanan persis format cetak berhasil dibuat di Google Drive.");
+                        if (result.fileUrl) {
+                            window.open(result.fileUrl, "_blank");
+                        }
                     } else {
                         alert("Gagal rekap bulanan PDF: " + (result.message || "Kesalahan tidak dikenal"));
                     }
