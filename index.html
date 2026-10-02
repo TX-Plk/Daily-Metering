@@ -392,7 +392,24 @@
                     querySnapshot.forEach((docSnap) => {
                         const docId = docSnap.id;
                         if (docId.startsWith(monthYear)) {
-                            reportsMap[docId] = docSnap.data();
+                            let reportData = docSnap.data();
+                            
+                            // Otomatis mengisi Status AC & Fiber Optic dengan "OK" jika kosong pada rekap PDF bulanan[cite: 4]
+                            if (reportData.meteringData) {
+                                TIME_SLOTS.forEach(slot => {
+                                    if (!reportData.meteringData.ac_status) reportData.meteringData.ac_status = {};
+                                    if (!reportData.meteringData.ac_status[slot]) {
+                                        reportData.meteringData.ac_status[slot] = "OK";
+                                    }
+                                    
+                                    if (!reportData.meteringData.fo_status) reportData.meteringData.fo_status = {};
+                                    if (!reportData.meteringData.fo_status[slot]) {
+                                        reportData.meteringData.fo_status[slot] = "OK";
+                                    }
+                                });
+                            }
+
+                            reportsMap[docId] = reportData;
                         }
                     });
 
@@ -417,7 +434,7 @@
 
                     const result = await res.json();
                     if (result.status === "success") {
-                        alert("Sukses! File PDF rekap bulanan persis format cetak berhasil dibuat di Google Drive.");
+                        alert("Sukses! File PDF rekap bulanan dengan Status AC & FO 'OK' berhasil dibuat di Google Drive.");
                         if (result.fileUrl) {
                             window.open(result.fileUrl, "_blank");
                         }
