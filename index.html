@@ -347,11 +347,17 @@
             const handleInputChange = (paramId, timeSlot, value) => {
                 if (isFormLocked) return;
                 
+                let processedVal = value;
+                // Tambahkan teks "OK ok" otomatis jika parameter ac_status atau fo_status diset ke OK
+                if ((paramId === "ac_status" || paramId === "fo_status") && (processedVal === "OK" || processedVal === "")) {
+                    processedVal = processedVal === "OK" ? "OK ok" : "";
+                }
+
                 const updatedData = {
                     ...meteringData,
                     [paramId]: {
                         ...(meteringData[paramId] || {}),
-                        [timeSlot]: value
+                        [timeSlot]: processedVal
                     }
                 };
 
@@ -392,24 +398,7 @@
                     querySnapshot.forEach((docSnap) => {
                         const docId = docSnap.id;
                         if (docId.startsWith(monthYear)) {
-                            let reportData = docSnap.data();
-                            
-                            // Otomatis mengisi Status AC & Fiber Optic dengan "OK" jika kosong pada rekap PDF bulanan[cite: 4]
-                            if (reportData.meteringData) {
-                                TIME_SLOTS.forEach(slot => {
-                                    if (!reportData.meteringData.ac_status) reportData.meteringData.ac_status = {};
-                                    if (!reportData.meteringData.ac_status[slot]) {
-                                        reportData.meteringData.ac_status[slot] = "OK";
-                                    }
-                                    
-                                    if (!reportData.meteringData.fo_status) reportData.meteringData.fo_status = {};
-                                    if (!reportData.meteringData.fo_status[slot]) {
-                                        reportData.meteringData.fo_status[slot] = "OK";
-                                    }
-                                });
-                            }
-
-                            reportsMap[docId] = reportData;
+                            reportsMap[docId] = docSnap.data();
                         }
                     });
 
@@ -434,7 +423,7 @@
 
                     const result = await res.json();
                     if (result.status === "success") {
-                        alert("Sukses! File PDF rekap bulanan dengan Status AC & FO 'OK' berhasil dibuat di Google Drive.");
+                        alert("Sukses! File PDF rekap bulanan persis format cetak berhasil dibuat di Google Drive.");
                         if (result.fileUrl) {
                             window.open(result.fileUrl, "_blank");
                         }
@@ -761,7 +750,7 @@
                             </div>
                             <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
                                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Fasilitas</p>
-                                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">OK</p>
+                                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">OK ok</p>
                                 <p className="text-xs text-slate-400 mt-1">AC & Fiber Optic Normal</p>
                             </div>
                             <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
@@ -860,7 +849,7 @@
                                                                                         className={`w-full p-0.5 text-center bg-transparent dark:text-slate-200 focus:outline-none font-semibold ${isFormLocked ? 'cursor-not-allowed opacity-75' : ''}`}
                                                                                     >
                                                                                         <option value="" className="dark:bg-slate-900">-</option>
-                                                                                        {param.options.map(opt => <option key={opt} value={opt} className="dark:bg-slate-900">{opt}</option>)}
+                                                                                        {param.options.map(opt => <option key={opt} value={opt} className="dark:bg-slate-900">{opt === "OK" ? "OK ok" : opt}</option>)}
                                                                                     </select>
                                                                                 </td>
                                                                             );
@@ -1014,7 +1003,7 @@
                                                                     className={`w-full p-1.5 text-xs border dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none ${isFormLocked ? 'cursor-not-allowed opacity-75' : ''}`}
                                                                 >
                                                                     <option value="">- Pilih -</option>
-                                                                    {param.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                                    {param.options.map(opt => <option key={opt} value={opt}>{opt === "OK" ? "OK ok" : opt}</option>)}
                                                                 </select>
                                                             ) : (
                                                                 <input 
