@@ -431,36 +431,6 @@
                 }
             };
 
-            const handleExportMonthlyExcel = async () => {
-                const monthYear = date.substring(0, 7); 
-                setDriveLoading(true);
-                try {
-                    const res = await fetch(GOOGLE_SCRIPT_URL, {
-                        method: "POST",
-                        headers: { "Content-Type": "text/plain;charset=utf-8" },
-                        body: JSON.stringify({ 
-                            action: "exportMonthlyExcel", 
-                            monthYear: monthYear
-                        }),
-                        redirect: "follow"
-                    });
-
-                    const result = await res.json();
-                    if (result.status === "success") {
-                        alert("Sukses! File Excel/Spreadsheet rekap bulanan berhasil dibuat di Google Drive.");
-                        if (result.fileUrl) {
-                            window.open(result.fileUrl, "_blank");
-                        }
-                    } else {
-                        alert("Gagal membuat Excel rekap bulanan: " + (result.message || "Kesalahan tidak dikenal"));
-                    }
-                } catch (err) {
-                    alert("Gagal terhubung ke server Google Apps Script.");
-                } finally {
-                    setDriveLoading(false);
-                }
-            };
-
             const fetchPdfHistory = async () => {
                 setShowHistoryModal(true);
                 setLoadingHistory(true);
@@ -706,14 +676,6 @@
                                             className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 rounded-lg text-sm font-semibold shadow-sm flex items-center gap-1 disabled:opacity-50"
                                         >
                                             📄 {driveLoading ? "Proses..." : "Rekap Bulanan PDF"}
-                                        </button>
-
-                                        <button 
-                                            onClick={handleExportMonthlyExcel} 
-                                            disabled={driveLoading}
-                                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm font-semibold shadow-sm flex items-center gap-1 disabled:opacity-50"
-                                        >
-                                            📊 {driveLoading ? "Proses..." : "Rekap Bulanan Excel"}
                                         </button>
 
                                         <button 
